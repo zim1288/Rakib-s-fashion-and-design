@@ -1,0 +1,613 @@
+package com.example.ui.screens
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.db.*
+import com.example.ui.AuthState
+import com.example.ui.TallyViewModel
+import com.example.ui.theme.*
+import java.text.NumberFormat
+import java.util.Locale
+
+@OptIn(ExperimentalAnimationApi::class)
+enum class AuthMode { SIGN_IN, SIGN_UP, FORGOT_PASSWORD }
+
+@Composable
+fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
+    var mode by remember { mutableStateOf(AuthMode.SIGN_IN) }
+    val focusManager = LocalFocusManager.current
+
+    // Sign In Fields
+    var loginUserOrEmail by remember { mutableStateOf("watchdogs27777@gmail.com") }
+    var loginPassword by remember { mutableStateOf("password123") }
+    var loginPasswordVisible by remember { mutableStateOf(value = false) }
+
+    // Sign Up Fields
+    var signUpEmail by remember { mutableStateOf("") }
+    var signUpUsername by remember { mutableStateOf("") }
+    var signUpPassword by remember { mutableStateOf("") }
+    var signUpPasswordVisible by remember { mutableStateOf(false) }
+    val signUpQuestions = remember {
+        listOf(
+            "What is your main brand?",
+            "What is your favorite color?",
+            "What is your birth city?",
+            "What is your first pet's name?",
+        )
+    }
+    var signUpQuestionIdx by remember { mutableIntStateOf(0) }
+    var signUpAnswer by remember { mutableStateOf("") }
+    var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    // Forgot Password Fields
+    var forgotEmail by remember { mutableStateOf("") }
+    var forgotQuestionIdx by remember { mutableStateOf(0) }
+    var forgotAnswer by remember { mutableStateOf("") }
+    var forgotStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        item {
+            Spacer(modifier = Modifier.height(36.dp))
+
+            // Decorative South Asian Paisley/Mandala styled icon
+            Card(
+                modifier = Modifier
+                    .size(80.dp)
+                    .testTag("login_logo_card"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Royal Logo",
+                        tint = GoldAccent,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Rakib Silk & Fashion",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Mode switching and primary container card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("auth_card"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    when (mode) {
+                        AuthMode.SIGN_IN -> {
+                            Text(
+                                text = "Sign In To Account",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            OutlinedTextField(
+                                value = loginUserOrEmail,
+                                onValueChange = { loginUserOrEmail = it },
+                                label = { Text("Email or Username") },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Email/Username", tint = RoyalCrimson) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("login_username_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            OutlinedTextField(
+                                value = loginPassword,
+                                onValueChange = { loginPassword = it },
+                                label = { Text("Password") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = RoyalCrimson) },
+                                trailingIcon = {
+                                    IconButton(
+                                        onClick = { loginPasswordVisible = !loginPasswordVisible }
+                                    ) {
+                                        Icon(
+                                            imageVector = if (loginPasswordVisible) Icons.Default.Info else Icons.Default.Lock,
+                                            contentDescription = "Toggle password visibility",
+                                            tint = RoyalCrimson.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (loginPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("login_password_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            // Forget Password Switcher Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        forgotStatusMessage = null
+                                        mode = AuthMode.FORGOT_PASSWORD
+                                    },
+                                    modifier = Modifier.testTag("forgot_password_btn")
+                                ) {
+                                    Text(
+                                        text = "Forgot Password?",
+                                        color = RoyalCrimson,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                                    )
+                                }
+                            }
+
+                            if (authState is AuthState.ERROR) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = authState.error,
+                                        color = MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Button(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    viewModel.login(loginUserOrEmail, loginPassword)
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("login_btn_submit"),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = RoyalCrimson,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                if (authState is AuthState.AUTHENTICATING) {
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                } else {
+                                    Text("AUTHENTICATE & ENTER", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Go to SignUp Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Don't have an account?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                TextButton(
+                                    onClick = {
+                                        signUpStatusMessage = null
+                                        mode = AuthMode.SIGN_UP
+                                    },
+                                    modifier = Modifier.testTag("sign_up_mode_btn")
+                                ) {
+                                    Text("Sign Up", color = RoyalCrimson, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                }
+                            }
+                        }
+
+                        AuthMode.SIGN_UP -> {
+                            Text(
+                                text = "Create Staff Account",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            OutlinedTextField(
+                                value = signUpEmail,
+                                onValueChange = { signUpEmail = it },
+                                label = { Text("Email Address") },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = RoyalCrimson) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_email_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = signUpUsername,
+                                onValueChange = { signUpUsername = it },
+                                label = { Text("Staff Username") },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username", tint = RoyalCrimson) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_username_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = signUpPassword,
+                                onValueChange = { signUpPassword = it },
+                                label = { Text("Password (Min 4 chars)") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = RoyalCrimson) },
+                                trailingIcon = {
+                                    IconButton(onClick = { signUpPasswordVisible = !signUpPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (signUpPasswordVisible) Icons.Default.Info else Icons.Default.Lock,
+                                            contentDescription = "Toggle password visibility",
+                                            tint = RoyalCrimson.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (signUpPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_password_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Security Question Cycling Row
+                            OutlinedTextField(
+                                value = signUpQuestions[signUpQuestionIdx],
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Security Question (Tap to Switch)") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size
+                                    }) {
+                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = RoyalCrimson)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size }
+                                    .testTag("signup_question_tap"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = signUpAnswer,
+                                onValueChange = { signUpAnswer = it },
+                                label = { Text("Security Answer") },
+                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = RoyalCrimson) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_answer_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            signUpStatusMessage?.let { (isSuccess, message) ->
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSuccess) SageGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = message,
+                                        color = if (isSuccess) Color(0xFF2D332C) else MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Button(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    viewModel.registerUser(
+                                        email = signUpEmail,
+                                        username = signUpUsername,
+                                        passwordEntered = signUpPassword,
+                                        securityQuestion = signUpQuestions[signUpQuestionIdx],
+                                        securityAnswer = signUpAnswer
+                                    ) { success, msg ->
+                                        signUpStatusMessage = Pair(success, msg)
+                                        if (success) {
+                                            // Reset fields
+                                            signUpEmail = ""
+                                            signUpUsername = ""
+                                            signUpPassword = ""
+                                            signUpAnswer = ""
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("signup_btn_submit"),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = RoyalCrimson,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("SIGN UP & CREATE", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Already have an account?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                TextButton(
+                                    onClick = { mode = AuthMode.SIGN_IN },
+                                    modifier = Modifier.testTag("back_to_signin_btn")
+                                ) {
+                                    Text("Sign In", color = RoyalCrimson, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                }
+                            }
+                        }
+
+                        AuthMode.FORGOT_PASSWORD -> {
+                            Text(
+                                text = "Recover Your Password",
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            OutlinedTextField(
+                                value = forgotEmail,
+                                onValueChange = { forgotEmail = it },
+                                label = { Text("Registered Email Address") },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = RoyalCrimson) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("forgot_email_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = signUpQuestions[forgotQuestionIdx],
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Select Security Question") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
+                                trailingIcon = {
+                                    IconButton(onClick = {
+                                        forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size
+                                    }) {
+                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = RoyalCrimson)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size }
+                                    .testTag("forgot_question_tap"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = forgotAnswer,
+                                onValueChange = { forgotAnswer = it },
+                                label = { Text("Security Answer") },
+                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = RoyalCrimson) },
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("forgot_answer_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            forgotStatusMessage?.let { (isSuccess, message) ->
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSuccess) SageGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                    ),
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = message,
+                                        color = if (isSuccess) Color(0xFF2D332C) else MaterialTheme.colorScheme.onErrorContainer,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (isSuccess) FontWeight.Bold else FontWeight.Normal),
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            Button(
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    viewModel.verifySecurityAnswer(
+                                        email = forgotEmail,
+                                        securityQuestion = signUpQuestions[forgotQuestionIdx],
+                                        answer = forgotAnswer
+                                    ) { isSuccess, resultText ->
+                                        forgotStatusMessage = Pair(isSuccess, resultText)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("forgot_btn_submit"),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = RoyalCrimson,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Text("RECOVER SECURITY LOCK", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            TextButton(
+                                onClick = { mode = AuthMode.SIGN_IN },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("forgot_back_to_signin_btn")
+                            ) {
+                                Text("Back to Sign In", color = RoyalCrimson, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Help info box describing default test login
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)),
+                border = BorderStroke(1.dp, AntiqueCream),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("default_staff_info_card")
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "💡 Quick Testing Credentials",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "User/Email: watchdogs27777@gmail.com\nPassword: password123\n\nOr feel free to sign up a brand new user account directly!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+    }
+}

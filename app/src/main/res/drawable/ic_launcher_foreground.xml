@@ -1,0 +1,23 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer gold ornament ring representing saree borders -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="3.5"
+        android:pathData="M 54, 24 A 30,30 0 1,1 53.99,24 Z" />
+    <!-- Traditional Indian royal star motif representing high fashion heritage -->
+    <path
+        android:fillColor="#D4AF37"
+        android:strokeColor="#00000000"
+        android:strokeWidth="1"
+        android:pathData="M 54,30 L 58,45 L 73,45 L 61,53 L 65,68 L 54,59 L 43,68 L 47,53 L 35,45 L 50,45 Z" />
+    <path
+        android:fillColor="#FFFDF7"
+        android:strokeColor="#00000000"
+        android:strokeWidth="1"
+        android:pathData="M 54,36 L 56,47 L 67,47 L 58,53 L 61,64 L 54,57 L 47,64 L 50,53 L 41,47 L 52,47 Z" />
+</vector>

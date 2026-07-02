@@ -1,0 +1,6 @@
+{
+  "name": "Rakib Silk & Fashion",
+  "description": "Premium tally khata and stock management system for saree businesses, with live financial tracking, local persistence, and optimistic updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
