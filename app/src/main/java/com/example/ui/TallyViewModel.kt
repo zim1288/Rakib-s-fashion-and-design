@@ -2,9 +2,9 @@ package com.example.ui
 
 import android.app.Application
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.core.content.edit
 import com.example.TallyApplication
 import com.example.db.*
 import kotlinx.coroutines.flow.*
@@ -27,7 +27,7 @@ data class CartItem(
     val brandCategory: String, // "Rakib Fashion" or "Rakib Silk"
     val unitCost: Double,
     val quantity: Int,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
 )
 
 class TallyViewModel(application: Application) : AndroidViewModel(application) {
@@ -68,9 +68,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     fun setDarkMode(isDark: Boolean?) {
         _isDarkMode.value = isDark
         if (isDark == null) {
-            prefs.edit().remove("is_dark_mode").apply()
+            prefs.edit { remove("is_dark_mode") }
         } else {
-            prefs.edit().putBoolean("is_dark_mode", isDark).apply()
+            prefs.edit { putBoolean("is_dark_mode", isDark) }
         }
     }
 
@@ -181,17 +181,17 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         _currentUserEmail.value = user.email
                         _authState.value = AuthState.Authorized
-                        prefs.edit().putString("logged_in_email", user.email).apply()
+                        prefs.edit { putString("logged_in_email", user.email) }
                     }
                 } else {
                     _authState.value = AuthState.Error("Incorrect password. Please try again.")
                 }
             } else {
                 // Fallback check for standard authorized accounts if they haven't been compiled yet
-                if (credential in authorizedEmails.map { it.lowercase() } && passwordEntered == "password123") {
+                if ((credential in authorizedEmails.map { it.lowercase() }) && (passwordEntered == "password123")) {
                     _currentUserEmail.value = credential
                     _authState.value = AuthState.Authorized
-                    prefs.edit().putString("logged_in_email", credential).apply()
+                    prefs.edit { putString("logged_in_email", credential) }
                 } else {
                     _authState.value = AuthState.Error("Staff account not found. Please Sign Up to register your credentials.")
                 }
@@ -290,7 +290,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
             _currentUserEmail.value = verifiedUser.email
             _authState.value = AuthState.Authorized
-            prefs.edit().putString("logged_in_email", verifiedUser.email).apply()
+            prefs.edit { putString("logged_in_email", verifiedUser.email) }
 
             callback(true, "Email verified successfully!")
         }
@@ -340,7 +340,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 callback(false, "Security question mismatch!")
                 return@launch
             }
-            if (user.securityAnswer.trim().lowercase() == answer.trim().lowercase()) {
+            if (user.securityAnswer.equals(answer.trim(), ignoreCase = true)) {
                 callback(true, "Your password is: ${user.password}")
             } else {
                 callback(false, "Answer is incorrect. Try again!")
@@ -352,7 +352,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         _currentUserEmail.value = ""
         _authState.value = AuthState.NotLoggedIn
         _currentScreen.value = "DASHBOARD"
-        prefs.edit().remove("logged_in_email").apply()
+        prefs.edit { remove("logged_in_email") }
     }
 
     fun navigateTo(screen: String) {
@@ -390,7 +390,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             for (cartItem in itemsToCommit) {
                 // Check if item exists in present house inventory
                 val existing = sareeItems.value.firstOrNull {
-                    it.modelName.lowercase() == cartItem.modelName.lowercase() &&
+                    it.modelName.equals(cartItem.modelName, ignoreCase = true) &&
                             it.brandCategory == cartItem.brandCategory
                 }
 
@@ -479,10 +479,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 if (existing != null) {
-                    repository.updateSareeItem(existing.copy(
-                        pieceCount = existing.pieceCount + item.quantity,
-                        imageUrl = item.imageUrl ?: existing.imageUrl
-                    ))
+                    repository.updateSareeItem(
+                        existing.copy(
+                            pieceCount = existing.pieceCount + item.quantity,
+                            imageUrl = item.imageUrl ?: existing.imageUrl,
+                        ),
+                    )
                 } else {
                     repository.insertSareeItem(
                         SareeItem(
