@@ -54,8 +54,8 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                     .fillMaxWidth()
                     .padding(bottom = 20.dp)
                     .testTag("valuation_hero_card"),
-                colors = CardDefaults.cardColors(containerColor = SlateDark),
-                border = BorderStroke(1.dp, GoldAccent),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
@@ -65,14 +65,14 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                     Text(
                         text = "TOTAL STOCK VALUATION",
                         style = MaterialTheme.typography.labelLarge,
-                        color = GoldAccent,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "৳ ${formatCurrency(totalValuation)}",
                         style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
@@ -80,12 +80,12 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Active Models", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f))
-                            Text(sarees.size.toString(), style = MaterialTheme.typography.titleMedium, color = SoftEggshell, fontWeight = FontWeight.Bold)
+                            Text("Active Models", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
+                            Text(sarees.size.toString(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Total Weaving", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f))
-                            Text("$activeWeavingCount pcs", style = MaterialTheme.typography.titleMedium, color = SoftEggshell, fontWeight = FontWeight.Bold)
+                            Text("Total Weaving", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
+                            Text("$activeWeavingCount pcs", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

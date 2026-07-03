@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import com.example.ui.TallyViewModel
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -12,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,6 +37,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.example.db.*
+import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -48,16 +49,14 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
     val sarees by viewModel.sareeItems.collectAsStateWithLifecycle()
     var selectedBrand by remember { mutableStateOf("Rakib Silk") } // Rakib Silk / Rakib Fashion
 
-    val valuation = remember(sarees, selectedBrand) {
-        sarees.filter { it.brandCategory == selectedBrand }.sumOf { it.totalValue }
-    }
+    val valuation = sarees.filter { it.brandCategory == selectedBrand }.sumOf { it.totalValue }
 
     var itemToEdit by remember { mutableStateOf<SareeItem?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         // Instant Live Valuation banner
         Card(
@@ -213,11 +212,12 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
     itemToEdit?.let { item ->
         EditItemDialog(
             item = item,
-            onDismiss = { itemToEdit = null }
-        ) { name, category, price, count, imageUrl ->
-            viewModel.updateStockItemDetails(item.id, name, category, price, count, imageUrl)
-            itemToEdit = null
-        }
+            onDismiss = { itemToEdit = null },
+            onConfirm = { name, category, price, count, imageUrl ->
+                viewModel.updateStockItemDetails(item.id, name, category, price, count, imageUrl)
+                itemToEdit = null
+            }
+        )
     }
 }
 
@@ -232,16 +232,16 @@ fun EditItemDialog(
     var countStr by remember { mutableStateOf(item.pieceCount.toString()) }
     var brandCategory by remember { mutableStateOf(item.brandCategory) }
     var imageUrl by remember { mutableStateOf(item.imageUrl) }
-    
+
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            imageUrl = it.toString()
+        if (uri != null) {
+            imageUrl = uri.toString()
         }
     }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = SoftEggshell),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth()
@@ -252,7 +252,7 @@ fun EditItemDialog(
                     .padding(20.dp)
                     .fillMaxWidth()
             ) {
-                Text("Edit Saree Details", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = SlateDark)
+                Text("Edit Saree Details", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
@@ -275,8 +275,8 @@ fun EditItemDialog(
                         Button(
                             onClick = { brandCategory = brand },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (active) RoyalCrimson else Color.LightGray.copy(alpha = 0.4f),
-                                contentColor = if (active) Color.White else SlateDark
+                                containerColor = if (active) TobaccoSaddle else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                contentColor = if (active) Color.White else MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -304,7 +304,7 @@ fun EditItemDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(

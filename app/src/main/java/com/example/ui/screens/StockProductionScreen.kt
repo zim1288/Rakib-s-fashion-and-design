@@ -7,7 +7,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -92,14 +91,20 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                     .testTag("add_production_card")
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text("Spin Fresh Loom Production Lot", style = MaterialTheme.typography.titleSmall, color = RoyalCrimson)
+                    Text("Spin Fresh Loom Production Lot", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = newModel,
                         onValueChange = { newModel = it },
                         label = { Text("Saree Model Detail") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -109,14 +114,26 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                             label = { Text("Loom Pieces") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
                         )
                         OutlinedTextField(
                             value = newDate,
                             onValueChange = { newDate = it },
                             label = { Text("Estimated Date") },
                             singleLine = true,
-                            modifier = Modifier.weight(1.2f)
+                            modifier = Modifier.weight(1.2f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
                         )
                     }
 
@@ -191,12 +208,21 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
             ) {
                 itemsIndexed(items) { index, item ->
                     val isCompleted = item.status == "Completed"
+                    val darkTheme = isSystemInDarkTheme()
+                    val completedBgColor = if (darkTheme) Color(0xFF1B3B2B) else Color(0xFFEFFDF5)
+                    val statusColor = if (isCompleted) {
+                        if (darkTheme) Color(0xFF81C784) else Color(0xFF0F5132)
+                    } else {
+                        if (darkTheme) Color(0xFFFFB74D) else Color(0xFF664D03)
+                    }
+                    val labelColor = if (darkTheme) Color.LightGray else Color.DarkGray
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("production_item_$index"),
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isCompleted) Color(0xFFEFFDF5) else MaterialTheme.colorScheme.surface
+                            containerColor = if (isCompleted) completedBgColor else MaterialTheme.colorScheme.surface
                         ),
                         border = BorderStroke(1.dp, if (isCompleted) Color.Green.copy(alpha = 0.3f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                     ) {
@@ -231,7 +257,7 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                                     Text(
                                         text = item.status,
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = if (isCompleted) Color(0xFF0F5132) else Color(0xFF664D03)
+                                        color = statusColor
                                     )
                                 }
                                 Text(item.modelName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
@@ -255,7 +281,7 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                                 Text(
                                     text = if (isCompleted) "Finished Stock!" else "Active Loom",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                    color = Color.DarkGray
+                                    color = labelColor
                                 )
                             }
                         }

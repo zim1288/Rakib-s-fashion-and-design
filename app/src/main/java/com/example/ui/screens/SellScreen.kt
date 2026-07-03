@@ -126,12 +126,12 @@ fun SellScreen(viewModel: TallyViewModel) {
                                                 expanded = false
                                             }
                                             .padding(12.dp)
-                                            .background(if (idx == selectedItemIndex) RoyalCrimson.copy(alpha = 0.1f) else Color.Transparent)
+                                            .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
                                     ) {
                                         Column {
                                             Text(item.modelName, fontWeight = FontWeight.Bold)
                                             Row {
-                                                Text(item.brandCategory, color = GoldAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text(item.brandCategory, color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                 Spacer(modifier = Modifier.width(12.dp))
                                                 Text("Avail count: ${item.pieceCount} | Standard P: ৳${formatCurrency(item.unitPrice)}", fontSize = 11.sp)
                                             }
@@ -151,7 +151,13 @@ fun SellScreen(viewModel: TallyViewModel) {
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("sold_quantity_input")
+                            .testTag("sold_quantity_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -164,7 +170,13 @@ fun SellScreen(viewModel: TallyViewModel) {
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("sold_price_input")
+                            .testTag("sold_price_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))

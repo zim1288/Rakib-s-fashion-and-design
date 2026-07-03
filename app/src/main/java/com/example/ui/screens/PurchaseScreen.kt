@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -100,11 +99,11 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .clickable { categoryInput = brand }
-                                        .background(if (active) RoyalCrimson else Color.Transparent)
+                                        .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
                                         .padding(vertical = 8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(brand.substringAfter(" "), fontSize = 11.sp, color = if (active) Color.White else SlateDark, fontWeight = FontWeight.Bold)
+                                    Text(brand.substringAfter(" "), fontSize = 11.sp, color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -116,7 +115,13 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                         label = { Text("Unit Cost") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        modifier = Modifier.weight(0.9f)
+                        modifier = Modifier.weight(0.9f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
 
                     OutlinedTextField(
@@ -125,7 +130,13 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                         label = { Text("Pieces") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        modifier = Modifier.weight(0.7f)
+                        modifier = Modifier.weight(0.7f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
                     )
                 }
 
@@ -192,7 +203,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Bulk Cargo Staging Cart (${cartList.size} items)", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = SlateDark)
+            Text("Bulk Cargo Staging Cart (${cartList.size} items)", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
             if (cartList.isNotEmpty()) {
                 Text(
                     text = "Clear Cart",
@@ -228,7 +239,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                     itemsIndexed(cartList) { idx, item ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = SoftEggshell),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             border = BorderStroke(1.dp, RoyalCrimson.copy(alpha = 0.15f))
                         ) {
                             Row(

@@ -112,10 +112,10 @@ fun SettingsScreen(viewModel: TallyViewModel) {
                         checked = isDarkMode == true,
                         onCheckedChange = { viewModel.setDarkMode(it) },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = GoldAccent,
-                            checkedTrackColor = CardinalRed,
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.LightGray
+                            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                            checkedTrackColor = MaterialTheme.colorScheme.primary,
+                            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                     )
                 }
