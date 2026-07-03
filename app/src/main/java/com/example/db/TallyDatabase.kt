@@ -21,7 +21,8 @@ data class ProductionItem(
     @ColumnInfo(name = "model_name") val modelName: String,
     @ColumnInfo(name = "quantity") val quantity: Int,
     @ColumnInfo(name = "estimated_completion_date") val estimatedCompletionDate: String,
-    @ColumnInfo(name = "status") val status: String // "In Progress" or "Completed"
+    @ColumnInfo(name = "status") val status: String, // "In Progress" or "Completed"
+    @ColumnInfo(name = "image_url") val imageUrl: String? = null
 )
 
 @Entity(tableName = "transaction_logs")
@@ -42,7 +43,10 @@ data class UserAccount(
     val username: String,
     val password: String,
     @ColumnInfo(name = "security_question") val securityQuestion: String,
-    @ColumnInfo(name = "security_answer") val securityAnswer: String
+    @ColumnInfo(name = "security_answer") val securityAnswer: String,
+    @ColumnInfo(name = "is_verified", defaultValue = "0") val isVerified: Boolean = false,
+    @ColumnInfo(name = "verification_code") val verificationCode: String? = null,
+    @ColumnInfo(name = "code_generated_at") val codeGeneratedAt: Long = 0L
 )
 
 @Dao
@@ -96,7 +100,7 @@ interface TallyDao {
     suspend fun insertUserAccount(user: UserAccount): Long
 }
 
-@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 3, exportSchema = false)
+@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 5, exportSchema = false)
 abstract class TallyDatabase : RoomDatabase() {
     abstract fun tallyDao(): TallyDao
 }

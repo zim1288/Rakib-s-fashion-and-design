@@ -1,9 +1,13 @@
 package com.example.ui.screens
 
-import com.example.ui.TallyViewModel
 import androidx.compose.animation.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -33,6 +37,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
+import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -43,15 +48,22 @@ import java.util.Locale
 fun StockProductionScreen(viewModel: TallyViewModel) {
     val items by viewModel.productionItems.collectAsStateWithLifecycle()
 
-    var showAddNewPanel by remember { mutableStateOf(value = false) }
+    var showAddNewPanel by remember { mutableStateOf(false) }
     var newModel by remember { mutableStateOf("") }
     var newQty by remember { mutableStateOf("") }
     var newDate by remember { mutableStateOf("2026-06-30") }
+    var imageUrlInput by remember { mutableStateOf<String?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            imageUrlInput = uri.toString()
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -108,15 +120,44 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (!imageUrlInput.isNullOrBlank()) {
+                            AsyncImage(
+                                model = imageUrlInput,
+                                contentDescription = "Selected Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.LightGray.copy(alpha = 0.3f))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                        }
+                        OutlinedButton(
+                            onClick = { launcher.launch("image/*") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.AddCircle, contentDescription = "Pick Image", modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(if (imageUrlInput.isNullOrBlank()) "Add Picture" else "Change Picture")
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Button(
                         onClick = {
                             val qtyInt = newQty.toIntOrNull() ?: 10
                             if (newModel.isNotBlank()) {
-                                viewModel.addNewProductionItem(newModel, qtyInt, newDate)
+                                viewModel.addNewProductionItem(newModel, qtyInt, newDate, imageUrlInput)
                                 newModel = ""
                                 newQty = ""
+                                imageUrlInput = null
                                 showAddNewPanel = false
                             }
                         },
@@ -166,6 +207,18 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
+                            if (!item.imageUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = item.imageUrl,
+                                    contentDescription = "Production Image",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.LightGray.copy(alpha = 0.3f))
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
                             Column(modifier = Modifier.weight(1f)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(

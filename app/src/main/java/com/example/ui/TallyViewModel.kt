@@ -14,10 +14,11 @@ import java.util.*
 
 // Auth status states
 sealed interface AuthState {
-    object NOT_LOGGED_IN : AuthState
-    object AUTHENTICATING : AuthState
-    object AUTHORIZED : AuthState
-    data class ERROR(val error: String) : AuthState
+    object NotLoggedIn : AuthState
+    object Authenticating : AuthState
+    object Authorized : AuthState
+    data class VerificationRequired(val email: String) : AuthState
+    data class Error(val error: String) : AuthState
 }
 
 // Simple representation of cart items
@@ -25,7 +26,8 @@ data class CartItem(
     val modelName: String,
     val brandCategory: String, // "Rakib Fashion" or "Rakib Silk"
     val unitCost: Double,
-    val quantity: Int
+    val quantity: Int,
+    val imageUrl: String? = null
 )
 
 class TallyViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,7 +51,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = application.getSharedPreferences("tally_prefs", android.content.Context.MODE_PRIVATE)
 
     // UI state states
-    private val _authState = MutableStateFlow<AuthState>(AuthState.NOT_LOGGED_IN)
+    private val _authState = MutableStateFlow<AuthState>(AuthState.NotLoggedIn)
     val authState = _authState.asStateFlow()
 
     private val _currentUserEmail = MutableStateFlow("")
@@ -96,9 +98,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         val savedEmail = prefs.getString("logged_in_email", null)
         if (savedEmail != null) {
             _currentUserEmail.value = savedEmail
-            _authState.value = AuthState.AUTHORIZED
+            _authState.value = AuthState.Authorized
         }
-        
+
         if (prefs.contains("is_dark_mode")) {
             _isDarkMode.value = prefs.getBoolean("is_dark_mode", false)
         }
@@ -154,7 +156,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     username = username,
                     password = "password123",
                     securityQuestion = "What is your main brand?",
-                    securityAnswer = "Rakib Silk"
+                    securityAnswer = "Rakib Silk",
+                    isVerified = true
                 )
             )
         }
@@ -163,7 +166,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     // Authentication Logic
     fun login(emailOrUsername: String, passwordEntered: String) {
         viewModelScope.launch {
-            _authState.value = AuthState.AUTHENTICATING
+            _authState.value = AuthState.Authenticating
             val credential = emailOrUsername.trim().lowercase()
 
             var user = repository.getUserAccountByEmail(credential)
@@ -173,20 +176,24 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
             if (user != null) {
                 if (user.password == passwordEntered) {
-                    _currentUserEmail.value = user.email
-                    _authState.value = AuthState.AUTHORIZED
-                    prefs.edit().putString("logged_in_email", user.email).apply()
+                    if (!user.isVerified) {
+                        _authState.value = AuthState.VerificationRequired(user.email)
+                    } else {
+                        _currentUserEmail.value = user.email
+                        _authState.value = AuthState.Authorized
+                        prefs.edit().putString("logged_in_email", user.email).apply()
+                    }
                 } else {
-                    _authState.value = AuthState.ERROR("Incorrect password. Please try again.")
+                    _authState.value = AuthState.Error("Incorrect password. Please try again.")
                 }
             } else {
                 // Fallback check for standard authorized accounts if they haven't been compiled yet
                 if (credential in authorizedEmails.map { it.lowercase() } && passwordEntered == "password123") {
                     _currentUserEmail.value = credential
-                    _authState.value = AuthState.AUTHORIZED
+                    _authState.value = AuthState.Authorized
                     prefs.edit().putString("logged_in_email", credential).apply()
                 } else {
-                    _authState.value = AuthState.ERROR("Staff account not found. Please Sign Up to register your credentials.")
+                    _authState.value = AuthState.Error("Staff account not found. Please Sign Up to register your credentials.")
                 }
             }
         }
@@ -234,15 +241,85 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
+            val generatedCode = (100000..999999).random().toString()
             val newUser = UserAccount(
                 email = trimmedEmail,
                 username = trimmedUsername,
                 password = passwordEntered,
                 securityQuestion = securityQuestion,
-                securityAnswer = securityAnswer.trim()
+                securityAnswer = securityAnswer.trim(),
+                isVerified = false,
+                verificationCode = generatedCode,
+                codeGeneratedAt = System.currentTimeMillis()
             )
             repository.insertUserAccount(newUser)
-            callback(true, "Registration successful! You can now log in.")
+
+            // Trigger SMTP Verification Email via backend
+            val emailSent = repository.sendVerificationEmail(trimmedEmail, generatedCode)
+            if (emailSent) {
+                _authState.value = AuthState.VerificationRequired(trimmedEmail)
+                callback(true, "A 6-digit confirmation code has been sent to your email!")
+            } else {
+                // Take them to verification anyway, let them resend or retry
+                _authState.value = AuthState.VerificationRequired(trimmedEmail)
+                callback(true, "Account registered! We couldn't deliver the confirmation code. Please click Resend Code on the next screen.")
+            }
+        }
+    }
+
+    fun verifyCode(email: String, enteredCode: String, callback: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val user = repository.getUserAccountByEmail(email)
+            if (user == null) {
+                callback(false, "User account not found.")
+                return@launch
+            }
+            if (user.verificationCode != enteredCode) {
+                callback(false, "Incorrect verification code. Please try again.")
+                return@launch
+            }
+            val isExpired = System.currentTimeMillis() - user.codeGeneratedAt > 30 * 60 * 1000L // 30 mins
+            if (isExpired) {
+                callback(false, "Verification code expired. Please click Resend Code.")
+                return@launch
+            }
+
+            // Successfully verified!
+            val verifiedUser = user.copy(isVerified = true, verificationCode = null, codeGeneratedAt = 0L)
+            repository.insertUserAccount(verifiedUser)
+
+            _currentUserEmail.value = verifiedUser.email
+            _authState.value = AuthState.Authorized
+            prefs.edit().putString("logged_in_email", verifiedUser.email).apply()
+
+            callback(true, "Email verified successfully!")
+        }
+    }
+
+    fun resendVerificationCode(email: String, callback: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val user = repository.getUserAccountByEmail(email)
+            if (user == null) {
+                callback(false, "User account not found.")
+                return@launch
+            }
+            val timeSinceLast = System.currentTimeMillis() - user.codeGeneratedAt
+            if (timeSinceLast < 2 * 60 * 1000L) { // 2 minutes cooldown
+                val remainingSec = 120 - (timeSinceLast / 1000)
+                callback(false, "Please wait $remainingSec seconds before resending.")
+                return@launch
+            }
+
+            val newCode = (100000..999999).random().toString()
+            val updatedUser = user.copy(verificationCode = newCode, codeGeneratedAt = System.currentTimeMillis())
+            repository.insertUserAccount(updatedUser)
+
+            val sent = repository.sendVerificationEmail(email, newCode)
+            if (sent) {
+                callback(true, "A new 6-digit confirmation code has been sent to $email.")
+            } else {
+                callback(false, "Failed to send verification email. Please check your internet connection.")
+            }
         }
     }
 
@@ -273,7 +350,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         _currentUserEmail.value = ""
-        _authState.value = AuthState.NOT_LOGGED_IN
+        _authState.value = AuthState.NotLoggedIn
         _currentScreen.value = "DASHBOARD"
         prefs.edit().remove("logged_in_email").apply()
     }
@@ -283,9 +360,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // CART MANAGEMENT (Purchase screen)
-    fun addToCart(modelName: String, brand: String, cost: Double, quantity: Int) {
+    fun addToCart(modelName: String, brand: String, cost: Double, quantity: Int, imageUrl: String? = null) {
         if (modelName.isBlank() || quantity <= 0 || cost <= 0) return
-        purchaseCart.add(CartItem(modelName.trim(), brand, cost, quantity))
+        purchaseCart.add(CartItem(modelName.trim(), brand, cost, quantity, imageUrl))
     }
 
     fun removeFromCart(index: Int) {
@@ -321,7 +398,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     // Update pieces and recalculate
                     val updated = existing.copy(
                         pieceCount = existing.pieceCount + cartItem.quantity,
-                        unitPrice = cartItem.unitCost // Update to latest purchase cost/price indicator
+                        unitPrice = cartItem.unitCost, // Update to latest purchase cost/price indicator
+                        imageUrl = cartItem.imageUrl ?: existing.imageUrl
                     )
                     repository.updateSareeItem(updated)
                 } else {
@@ -330,7 +408,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                         modelName = cartItem.modelName,
                         brandCategory = cartItem.brandCategory,
                         unitPrice = cartItem.unitCost,
-                        pieceCount = cartItem.quantity
+                        pieceCount = cartItem.quantity,
+                        imageUrl = cartItem.imageUrl
                     )
                     repository.insertSareeItem(newItem)
                 }
@@ -398,16 +477,20 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     it.modelName.lowercase() == item.modelName.lowercase() &&
                             it.brandCategory == "Rakib Silk" // Defaults to Rakib Silk production
                 }
-                
+
                 if (existing != null) {
-                    repository.updateSareeItem(existing.copy(pieceCount = existing.pieceCount + item.quantity))
+                    repository.updateSareeItem(existing.copy(
+                        pieceCount = existing.pieceCount + item.quantity,
+                        imageUrl = item.imageUrl ?: existing.imageUrl
+                    ))
                 } else {
                     repository.insertSareeItem(
                         SareeItem(
                             modelName = item.modelName,
                             brandCategory = "Rakib Silk",
                             unitPrice = 5000.0, // Default estimated cost
-                            pieceCount = item.quantity
+                            pieceCount = item.quantity,
+                            imageUrl = item.imageUrl
                         )
                     )
                 }
@@ -429,14 +512,15 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addNewProductionItem(modelName: String, qty: Int, completionDate: String) {
+    fun addNewProductionItem(modelName: String, qty: Int, completionDate: String, imageUrl: String? = null) {
         if (modelName.isBlank() || qty <= 0 || completionDate.isBlank()) return
         viewModelScope.launch {
             val item = ProductionItem(
                 modelName = modelName.trim(),
                 quantity = qty,
                 estimatedCompletionDate = completionDate.trim(),
-                status = "In Progress"
+                status = "In Progress",
+                imageUrl = imageUrl
             )
             repository.insertProductionItem(item)
         }
@@ -469,5 +553,11 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setYearFilter(year: String) {
         _selectedYearFilter.value = year
+    }
+
+    fun forceSync() {
+        viewModelScope.launch {
+            repository.syncOfflineData()
+        }
     }
 }

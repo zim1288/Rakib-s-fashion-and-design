@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed interface SyncState {
@@ -137,7 +138,8 @@ class TallyRepository(private val tallyDao: TallyDao) {
                             modelName = item.modelName,
                             quantity = item.quantity,
                             estimatedCompletionDate = item.estimatedCompletionDate,
-                            status = item.status
+                            status = item.status,
+                            imageUrl = item.imageUrl
                         )
                     )
                 )
@@ -178,6 +180,51 @@ class TallyRepository(private val tallyDao: TallyDao) {
                 Log.e(TAG, "MongoDB transaction sync failed, logged offline.", e)
                 _syncState.value = SyncState.ERROR("Offline: Transaction Queued")
             }
+        }
+    }
+
+    suspend fun syncOfflineData() {
+        _syncState.value = SyncState.SYNCING
+        try {
+            val sarees = tallyDao.getAllSareeItems().first()
+            val prodItems = tallyDao.getAllProductionItems().first()
+
+            SareeApi.service.syncInventory(sarees.map {
+                NetworkSareeItem(
+                    id = it.id,
+                    modelName = it.modelName,
+                    brandCategory = it.brandCategory,
+                    unitPrice = it.unitPrice,
+                    pieceCount = it.pieceCount,
+                    imageUrl = it.imageUrl
+                )
+            })
+
+            SareeApi.service.syncProduction(prodItems.map {
+                NetworkProductionItem(
+                    id = it.id,
+                    modelName = it.modelName,
+                    quantity = it.quantity,
+                    estimatedCompletionDate = it.estimatedCompletionDate,
+                    status = it.status,
+                    imageUrl = it.imageUrl
+                )
+            })
+
+            _syncState.value = SyncState.SUCCESS
+        } catch (e: Exception) {
+            Log.e(TAG, "Offline sync failed", e)
+            _syncState.value = SyncState.ERROR("Offline sync failed: ${e.message}")
+        }
+    }
+
+    suspend fun sendVerificationEmail(email: String, code: String): Boolean {
+        return try {
+            val response = SareeApi.service.sendVerificationEmail(com.example.api.NetworkEmailRequest(email, code))
+            response.isSuccessful
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send verification email via API", e)
+            false
         }
     }
 }

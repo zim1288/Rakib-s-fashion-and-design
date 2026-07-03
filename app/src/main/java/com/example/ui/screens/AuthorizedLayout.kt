@@ -2,10 +2,11 @@ package com.example.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
@@ -47,8 +48,10 @@ fun AuthorizedLayout(viewModel: TallyViewModel, currentScreen: String, syncState
             syncState = syncState,
             onSettings = { viewModel.navigateTo("SETTINGS") },
             onBackToDashboard = { viewModel.navigateTo("DASHBOARD") },
-            showBackButton = currentScreen != "DASHBOARD"
-        )
+            showBackButton = currentScreen != "DASHBOARD",
+        ) {
+            viewModel.forceSync()
+        }
 
         Box(
             modifier = Modifier
@@ -74,7 +77,8 @@ fun TopBanner(
     syncState: SyncState,
     onSettings: () -> Unit,
     onBackToDashboard: () -> Unit,
-    showBackButton: Boolean
+    showBackButton: Boolean,
+    onSync: () -> Unit,
 ) {
     Surface(
         color = SlateDark,
@@ -110,7 +114,12 @@ fun TopBanner(
                             ),
                             color = GoldAccent
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable { onSync() }
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                        ) {
                             // Sync state chip
                             Box(
                                 modifier = Modifier

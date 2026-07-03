@@ -1,6 +1,10 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,11 +52,18 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
     var categoryInput by remember { mutableStateOf("Rakib Silk") } // Rakib Silk / Rakib Fashion
     var costInput by remember { mutableStateOf("") }
     var qtyInput by remember { mutableStateOf("") }
+    var imageUrlInput by remember { mutableStateOf<String?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            imageUrlInput = uri.toString()
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         Text("Stage Incoming Cargo Shipments", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = RoyalCrimson)
         Text("Build bulk purchase cart, then lock stock on commitment", style = MaterialTheme.typography.bodySmall)
@@ -119,16 +131,45 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (!imageUrlInput.isNullOrBlank()) {
+                        AsyncImage(
+                            model = imageUrlInput,
+                            contentDescription = "Selected Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.LightGray.copy(alpha = 0.3f))
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
+                    OutlinedButton(
+                        onClick = { launcher.launch("image/*") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.AddCircle, contentDescription = "Pick Image", modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(if (imageUrlInput.isNullOrBlank()) "Add Picture" else "Change Picture")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Button(
                     onClick = {
                         val cost = costInput.toDoubleOrNull() ?: 0.0
                         val qty = qtyInput.toIntOrNull() ?: 0
-                        if ((sareeInput.isNotBlank() && cost > 0) && qty > 0) {
-                            viewModel.addToCart(sareeInput, categoryInput, cost, qty)
+                        if (sareeInput.isNotBlank() && cost > 0 && qty > 0) {
+                            viewModel.addToCart(sareeInput, categoryInput, cost, qty, imageUrlInput)
                             // Clear inputs
                             sareeInput = ""
                             costInput = ""
                             qtyInput = ""
+                            imageUrlInput = null
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = RoyalCrimson),
@@ -197,16 +238,30 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(item.modelName, fontWeight = FontWeight.Bold)
-                                    Row {
-                                        Text(
-                                            text = item.brandCategory,
-                                            color = if (item.brandCategory == "Rakib Silk") GoldAccent else RoyalCrimson,
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (!item.imageUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = item.imageUrl,
+                                            contentDescription = "Selected Image",
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(Color.LightGray.copy(alpha = 0.3f))
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
-                                        Text("Cost: ৳${formatCurrency(item.unitCost)} x ${item.quantity} pieces", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    Column {
+                                        Text(item.modelName, fontWeight = FontWeight.Bold)
+                                        Row {
+                                            Text(
+                                                text = item.brandCategory,
+                                                color = if (item.brandCategory == "Rakib Silk") GoldAccent else RoyalCrimson,
+                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Cost: ৳${formatCurrency(item.unitCost)} x ${item.quantity} pieces", style = MaterialTheme.typography.bodySmall)
+                                        }
                                     }
                                 }
 

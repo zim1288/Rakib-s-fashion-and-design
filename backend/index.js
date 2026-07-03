@@ -157,8 +157,53 @@ app.post('/v1/transactions', async (req, res) => {
     }
 });
 
+// --- Email Verification Router ---
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'ecobits1288@gmail.com',
+        pass: 'lvqwjniwjbgvxahn'
+    }
+});
+
+app.post('/v1/auth/send-verification', async (req, res) => {
+    const { email, code } = req.body;
+    if (!email || !code) {
+        return res.status(400).json({ error: 'Email and code are required' });
+    }
+
+    const mailOptions = {
+        from: '"Rakib Silk & Fashion" <ecobits1288@gmail.com>',
+        to: email,
+        subject: 'Your Confirmation Code',
+        text: `Hello!\n\nHere is the one-time code to confirm your personal email address:\n\n${code}\n\nIf you didn't request the code, you can ignore this email.\n\nKind regards,\nRakib Silk & Fashion Team`,
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
+                <p>Hello!</p>
+                <p>Here is the one-time code to confirm your personal email address:</p>
+                <h1 style="font-size: 36px; font-weight: bold; color: #800020; letter-spacing: 2px; margin: 20px 0;">${code}</h1>
+                <p>If you didn't request the code, you can ignore this email.</p>
+                <br/>
+                <p>Kind regards,</p>
+                <p><strong>The Rakib Silk & Fashion team</strong></p>
+            </div>
+        `
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Verification email sent to ${email} successfully!`);
+        res.status(200).json({ status: 'ok' });
+    } catch (err) {
+        console.error('Error sending verification email:', err);
+        res.status(500).json({ error: 'Failed to send verification email: ' + err.message });
+    }
+});
+
 // Start the Server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Backend server listening on port ${PORT}`);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
 });

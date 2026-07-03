@@ -2,9 +2,11 @@ package com.example.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -42,13 +44,18 @@ enum class AuthMode { SIGN_IN, SIGN_UP, FORGOT_PASSWORD }
 
 @Composable
 fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
+    if (authState is AuthState.VerificationRequired) {
+        EmailVerificationLayout(viewModel = viewModel, email = authState.email)
+        return
+    }
+
     var mode by remember { mutableStateOf(AuthMode.SIGN_IN) }
     val focusManager = LocalFocusManager.current
 
     // Sign In Fields
     var loginUserOrEmail by remember { mutableStateOf("watchdogs27777@gmail.com") }
     var loginPassword by remember { mutableStateOf("password123") }
-    var loginPasswordVisible by remember { mutableStateOf(value = false) }
+    var loginPasswordVisible by remember { mutableStateOf(false) }
 
     // Sign Up Fields
     var signUpEmail by remember { mutableStateOf("") }
@@ -60,10 +67,10 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
             "What is your main brand?",
             "What is your favorite color?",
             "What is your birth city?",
-            "What is your first pet's name?",
+            "What is your first pet's name?"
         )
     }
-    var signUpQuestionIdx by remember { mutableIntStateOf(0) }
+    var signUpQuestionIdx by remember { mutableStateOf(0) }
     var signUpAnswer by remember { mutableStateOf("") }
     var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
@@ -164,9 +171,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 label = { Text("Password") },
                                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = RoyalCrimson) },
                                 trailingIcon = {
-                                    IconButton(
-                                        onClick = { loginPasswordVisible = !loginPasswordVisible }
-                                    ) {
+                                    IconButton(onClick = { loginPasswordVisible = !loginPasswordVisible }) {
                                         Icon(
                                             imageVector = if (loginPasswordVisible) Icons.Default.Info else Icons.Default.Lock,
                                             contentDescription = "Toggle password visibility",
@@ -206,7 +211,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 }
                             }
 
-                            if (authState is AuthState.ERROR) {
+                            if (authState is AuthState.Error) {
                                 Card(
                                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)),
                                     modifier = Modifier
@@ -240,7 +245,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                if (authState is AuthState.AUTHENTICATING) {
+                                if (authState is AuthState.Authenticating) {
                                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                                 } else {
                                     Text("AUTHENTICATE & ENTER", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
@@ -346,7 +351,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Security Question (Tap to Switch)") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
+                                leadingIcon = { Icon(Icons.Default.List, contentDescription = "Question", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size
@@ -483,7 +488,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Select Security Question") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
+                                leadingIcon = { Icon(Icons.Default.List, contentDescription = "Question", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size
@@ -608,6 +613,232 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
             }
 
             Spacer(modifier = Modifier.height(30.dp))
+        }
+    }
+}
+
+@Composable
+fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
+    var verificationCodeInput by remember { mutableStateOf("") }
+    var statusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var secondsRemaining by remember { mutableStateOf(120) }
+
+    LaunchedEffect(key1 = secondsRemaining) {
+        if (secondsRemaining > 0) {
+            kotlinx.coroutines.delay(1000L)
+            secondsRemaining -= 1
+        }
+    }
+
+    val focusManager = LocalFocusManager.current
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        item {
+            Spacer(modifier = Modifier.height(36.dp))
+
+            // Decorative Email Card
+            Card(
+                modifier = Modifier
+                    .size(80.dp)
+                    .testTag("verification_logo_card"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = "Email Code",
+                        tint = GoldAccent,
+                        modifier = Modifier.size(44.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Verify Your Email",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif
+                ),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "We have sent a 6-digit confirmation code to your email:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = email,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Container card for PIN input
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("verification_card"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Enter Confirmation Code",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedTextField(
+                        value = verificationCodeInput,
+                        onValueChange = {
+                            if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                verificationCodeInput = it
+                            }
+                        },
+                        label = { Text("6-Digit Code") },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Code", tint = RoyalCrimson) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("verification_code_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = RoyalCrimson,
+                            focusedLabelColor = RoyalCrimson
+                        )
+                    )
+
+                    statusMessage?.let { (isSuccess, message) ->
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSuccess) SageGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = message,
+                                color = if (isSuccess) Color(0xFF2D332C) else MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Button(
+                        onClick = {
+                            focusManager.clearFocus()
+                            if (verificationCodeInput.length != 6) {
+                                statusMessage = Pair(false, "Please enter the full 6-digit code.")
+                                return@Button
+                            }
+                            viewModel.verifyCode(email, verificationCodeInput) { success, msg ->
+                                statusMessage = Pair(success, msg)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("verify_code_submit_btn"),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = RoyalCrimson,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("VERIFY EMAIL", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (secondsRemaining > 0) {
+                        Text(
+                            text = "Resend code in ${secondsRemaining / 60}:${String.format("%02d", secondsRemaining % 60)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    } else {
+                        TextButton(
+                            onClick = {
+                                focusManager.clearFocus()
+                                viewModel.resendVerificationCode(email) { success, msg ->
+                                    statusMessage = Pair(success, msg)
+                                    if (success) {
+                                        secondsRemaining = 120
+                                    }
+                                }
+                            },
+                            modifier = Modifier.testTag("resend_code_btn")
+                        ) {
+                            Text(
+                                "Resend Code",
+                                color = RoyalCrimson,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Cancel / Back to login link
+            TextButton(
+                onClick = {
+                    viewModel.logout()
+                },
+                modifier = Modifier.testTag("back_to_signin_after_signup_btn")
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = RoyalCrimson,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Back to Sign In",
+                        color = RoyalCrimson,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }

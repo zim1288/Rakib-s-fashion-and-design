@@ -27,7 +27,8 @@ data class NetworkProductionItem(
     val modelName: String,
     val quantity: Int,
     val estimatedCompletionDate: String,
-    val status: String
+    val status: String,
+    val imageUrl: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -40,6 +41,12 @@ data class NetworkTransactionLog(
     val totalAmount: Double,
     val timestamp: Long,
     val dateString: String
+)
+
+@JsonClass(generateAdapter = true)
+data class NetworkEmailRequest(
+    val email: String,
+    val code: String
 )
 
 interface SareeApiService {
@@ -66,14 +73,16 @@ interface SareeApiService {
 
     @POST("transactions")
     suspend fun logTransaction(@Body log: NetworkTransactionLog): Response<Unit>
+
+    @POST("auth/send-verification")
+    suspend fun sendVerificationEmail(@Body request: NetworkEmailRequest): Response<Unit>
 }
 
 object SareeApi {
     private const val TAG = "SareeApi"
-    
-    // Fallback URL if user does not configure one.
-    // Represents a live MongoDB-connected cloud server
-    private const val DEFAULT_BASE_URL = "https://api.rakibsaree.com/v1/"
+
+    // Configured to point directly to the Cloud Run server for real-time synchronization and SMTP emails
+    private const val DEFAULT_BASE_URL = "https://ais-dev-mbt7fslb2k6z7hdf53r7bp-1031883906151.asia-southeast1.run.app/v1/"
 
     val service: SareeApiService by lazy {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
@@ -132,6 +141,10 @@ object SareeApi {
             override suspend fun getTransactions(): List<NetworkTransactionLog> = emptyList()
             override suspend fun logTransaction(log: NetworkTransactionLog): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Logged transaction for ${log.modelName} successfully.")
+                return Response.success(Unit)
+            }
+            override suspend fun sendVerificationEmail(request: NetworkEmailRequest): Response<Unit> {
+                Log.d(TAG, "Mock SMTP: Sent verification email with code ${request.code} to ${request.email}")
                 return Response.success(Unit)
             }
         }
