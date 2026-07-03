@@ -2,11 +2,9 @@ package com.example.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -16,9 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -27,17 +23,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.db.*
 import com.example.ui.AuthState
 import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
-import java.text.NumberFormat
 import java.util.Locale
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalAnimationApi::class)
 enum class AuthMode { SIGN_IN, SIGN_UP, FORGOT_PASSWORD }
@@ -53,8 +44,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
     val focusManager = LocalFocusManager.current
 
     // Sign In Fields
-    var loginUserOrEmail by remember { mutableStateOf("watchdogs27777@gmail.com") }
-    var loginPassword by remember { mutableStateOf("password123") }
+    var loginUserOrEmail by remember { mutableStateOf("") }
+    var loginPassword by remember { mutableStateOf("") }
     var loginPasswordVisible by remember { mutableStateOf(false) }
 
     // Sign Up Fields
@@ -70,13 +61,13 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
             "What is your first pet's name?"
         )
     }
-    var signUpQuestionIdx by remember { mutableStateOf(0) }
+    var signUpQuestionIdx by remember { mutableIntStateOf(0) }
     var signUpAnswer by remember { mutableStateOf("") }
     var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     // Forgot Password Fields
     var forgotEmail by remember { mutableStateOf("") }
-    var forgotQuestionIdx by remember { mutableStateOf(0) }
+    var forgotQuestionIdx by remember { mutableIntStateOf(0) }
     var forgotAnswer by remember { mutableStateOf("") }
     var forgotStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
@@ -351,7 +342,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Security Question (Tap to Switch)") },
-                                leadingIcon = { Icon(Icons.Default.List, contentDescription = "Question", tint = RoyalCrimson) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size
@@ -488,7 +479,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Select Security Question") },
-                                leadingIcon = { Icon(Icons.Default.List, contentDescription = "Question", tint = RoyalCrimson) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size
@@ -621,11 +612,11 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
 fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
     var verificationCodeInput by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
-    var secondsRemaining by remember { mutableStateOf(120) }
+    var secondsRemaining by remember { mutableIntStateOf(120) }
 
     LaunchedEffect(key1 = secondsRemaining) {
         if (secondsRemaining > 0) {
-            kotlinx.coroutines.delay(1000L)
+            kotlinx.coroutines.delay(1.seconds)
             secondsRemaining -= 1
         }
     }
@@ -786,7 +777,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
 
                     if (secondsRemaining > 0) {
                         Text(
-                            text = "Resend code in ${secondsRemaining / 60}:${String.format("%02d", secondsRemaining % 60)}",
+                            text = "Resend code in ${secondsRemaining / 60}:${String.format(Locale.getDefault(), "%02d", secondsRemaining % 60)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
@@ -824,7 +815,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
                         tint = RoyalCrimson,
                         modifier = Modifier.size(18.dp)

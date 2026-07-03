@@ -45,7 +45,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         "bookkeeper.faisal@gmail.com",
         "designer.rakib@gmail.com",
         "accounts.tally@rakibsilk.com",
-        "khata.supervisor@gmail.com"
+        "khata.supervisor@gmail.com",
     )
 
     private val prefs = application.getSharedPreferences("tally_prefs", android.content.Context.MODE_PRIVATE)
@@ -278,7 +278,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 callback(false, "Incorrect verification code. Please try again.")
                 return@launch
             }
-            val isExpired = System.currentTimeMillis() - user.codeGeneratedAt > 30 * 60 * 1000L // 30 mins
+            val isExpired = (System.currentTimeMillis() - user.codeGeneratedAt) > (30 * 60 * 1000L) // 30 mins
             if (isExpired) {
                 callback(false, "Verification code expired. Please click Resend Code.")
                 return@launch
@@ -474,7 +474,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             if (newStatus == "Completed") {
                 // Find existing or insert new automatically
                 val existing = sareeItems.value.firstOrNull {
-                    it.modelName.lowercase() == item.modelName.lowercase() &&
+                    it.modelName.equals(item.modelName, ignoreCase = true) &&
                             it.brandCategory == "Rakib Silk" // Defaults to Rakib Silk production
                 }
 

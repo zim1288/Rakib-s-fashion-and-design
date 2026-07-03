@@ -163,8 +163,8 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'ecobits1288@gmail.com',
-        pass: 'lvqwjniwjbgvxahn'
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
     }
 });
 
@@ -175,7 +175,7 @@ app.post('/v1/auth/send-verification', async (req, res) => {
     }
 
     const mailOptions = {
-        from: '"Rakib Silk & Fashion" <ecobits1288@gmail.com>',
+        from: `"Rakib Silk & Fashion" <${process.env.SMTP_USER}>`,
         to: email,
         subject: 'Your Confirmation Code',
         text: `Hello!\n\nHere is the one-time code to confirm your personal email address:\n\n${code}\n\nIf you didn't request the code, you can ignore this email.\n\nKind regards,\nRakib Silk & Fashion Team`,

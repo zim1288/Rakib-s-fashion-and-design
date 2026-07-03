@@ -39,10 +39,12 @@ A comprehensive inventory and production management system built with **Jetpack 
    npm install
    ```
 3. Configure environment variables:
-   Create a `.env` file in the `backend` folder and add your MongoDB URI:
+   Create a `.env` file in the `backend` folder and add your connection strings:
    ```env
    MONGODB_URI=your_mongodb_connection_string
-   PORT=3000
+   SMTP_USER=your_gmail_address
+   SMTP_PASS=your_app_specific_password
+   PORT=5000
    ```
 4. Start the server:
    ```bash

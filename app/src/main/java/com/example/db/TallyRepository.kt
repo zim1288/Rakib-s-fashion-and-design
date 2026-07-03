@@ -14,14 +14,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed interface SyncState {
-    object IDLE : SyncState
-    object SYNCING : SyncState
-    object SUCCESS : SyncState
+    data object IDLE : SyncState
+    data object SYNCING : SyncState
+    data object SUCCESS : SyncState
     data class ERROR(val message: String) : SyncState
 }
 
 class TallyRepository(private val tallyDao: TallyDao) {
-    private val TAG = "TallyRepository"
+    companion object {
+        private const val TAG = "TallyRepository"
+    }
     private val repositoryScope = CoroutineScope(Dispatchers.IO)
 
     suspend fun getUserAccountByEmail(email: String): UserAccount? = tallyDao.getUserAccountByEmail(email)
@@ -54,11 +56,6 @@ class TallyRepository(private val tallyDao: TallyDao) {
         triggerInventoryDeleteSync(item.id)
     }
 
-    suspend fun deleteSareeItemById(id: Int) {
-        tallyDao.deleteSareeItemById(id)
-        triggerInventoryDeleteSync(id)
-    }
-
     // 3. Stock in production actions with Optimistic Background Sync
     suspend fun insertProductionItem(item: ProductionItem) {
         val id = tallyDao.insertProductionItem(item)
@@ -69,10 +66,6 @@ class TallyRepository(private val tallyDao: TallyDao) {
     suspend fun updateProductionItem(item: ProductionItem) {
         tallyDao.updateProductionItem(item)
         triggerProductionSync(item)
-    }
-
-    suspend fun deleteProductionItem(item: ProductionItem) {
-        tallyDao.deleteProductionItem(item)
     }
 
     // 4. Transaction log triggers with Optimistic Background Sync
