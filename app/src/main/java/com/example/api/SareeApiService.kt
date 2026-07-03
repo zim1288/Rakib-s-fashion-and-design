@@ -81,8 +81,8 @@ interface SareeApiService {
 object SareeApi {
     private const val TAG = "SareeApi"
 
-    // Configured to point directly to the Cloud Run server for real-time synchronization and SMTP emails
-    private const val DEFAULT_BASE_URL = "https://ais-dev-mbt7fslb2k6z7hdf53r7bp-1031883906151.asia-southeast1.run.app/v1/"
+    // Configured to point directly to the Render server for real-time synchronization and SMTP emails
+    private const val DEFAULT_BASE_URL = "https://rakib-fashion-backend.onrender.com/v1/"
 
     val service: SareeApiService by lazy {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
