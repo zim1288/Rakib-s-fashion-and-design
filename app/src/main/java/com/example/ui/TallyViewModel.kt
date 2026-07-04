@@ -43,20 +43,6 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: TallyRepository = (application as TallyApplication).repository
 
-    // 10 Hardcoded Authorized Email Addresses (including current user and other members)
-    val authorizedEmails = listOf(
-        "watchdogs27777@gmail.com", // Fulfills userinfo metadata uniquely!
-        "rakib.silk.owner@gmail.com",
-        "rakib.fashion.manager@gmail.com",
-        "tally.admin@rakibsilk.com",
-        "sales.manager@rakibsilk.com",
-        "inventory.clerk@rakibsilk.com",
-        "bookkeeper.faisal@gmail.com",
-        "designer.rakib@gmail.com",
-        "accounts.tally@rakibsilk.com",
-        "khata.supervisor@gmail.com"
-    )
-
     private val prefs = application.getSharedPreferences("tally_prefs", android.content.Context.MODE_PRIVATE)
 
     // UI state states
@@ -76,12 +62,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setDarkMode(isDark: Boolean?) {
         _isDarkMode.value = isDark
-        prefs.edit {
-            if (isDark == null) {
-                remove("is_dark_mode")
-            } else {
-                putBoolean("is_dark_mode", isDark)
-            }
+        if (isDark == null) {
+            prefs.edit { remove("is_dark_mode") }
+        } else {
+            prefs.edit { putBoolean("is_dark_mode", isDark) }
         }
     }
 
@@ -128,51 +112,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private suspend fun prepopulateDatabase() {
-        val initialSarees = listOf(
-            SareeItem(modelName = "Katan Gold Zardosi", brandCategory = "Rakib Silk", unitPrice = 7500.0, pieceCount = 24),
-            SareeItem(modelName = "Royal Dhakai Jamdani", brandCategory = "Rakib Silk", unitPrice = 12500.0, pieceCount = 15),
-            SareeItem(modelName = "Banarasi Crimson Queen", brandCategory = "Rakib Silk", unitPrice = 16000.0, pieceCount = 8),
-            SareeItem(modelName = "Chiffon Summer Pastel", brandCategory = "Rakib Fashion", unitPrice = 4200.0, pieceCount = 45),
-            SareeItem(modelName = "Georgette Floral Breeze", brandCategory = "Rakib Fashion", unitPrice = 3800.0, pieceCount = 32),
-            SareeItem(modelName = "Organza Golden Weave", brandCategory = "Rakib Fashion", unitPrice = 5900.0, pieceCount = 18)
-        )
-        for (item in initialSarees) {
-            repository.insertSareeItem(item)
-        }
-
-        val initialProduction = listOf(
-            ProductionItem(modelName = "Premium Silk Jamdani Mix", quantity = 10, estimatedCompletionDate = "2026-06-28", status = "In Progress"),
-            ProductionItem(modelName = "Embroidered Georgette Rose", quantity = 25, estimatedCompletionDate = "2026-07-05", status = "In Progress"),
-            ProductionItem(modelName = "Semi-Katan Party Look", quantity = 15, estimatedCompletionDate = "2026-06-25", status = "Completed")
-        )
-        for (item in initialProduction) {
-            repository.insertProductionItem(item)
-        }
-
-        // Add starting logs to show Tally Khata immediately
-        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val dateStr = formatter.format(Date())
-        repository.insertTransactionLog(
-            TransactionLog(type = "EXPENSE", modelName = "Banarasi Crimson Queen Starter Pack", quantity = 10, unitPrice = 11000.0, totalAmount = 110000.0, dateString = dateStr)
-        )
-        repository.insertTransactionLog(
-            TransactionLog(type = "SALE", modelName = "Katan Gold Zardosi Launch Sale", quantity = 3, unitPrice = 8500.0, totalAmount = 25500.0, dateString = dateStr)
-        )
-
-        // Prepopulate default accounts for standard emails
-        for (email in authorizedEmails) {
-            val username = email.substringBefore("@")
-            repository.insertUserAccount(
-                UserAccount(
-                    email = email,
-                    username = username,
-                    password = hashPassword("password123"),
-                    securityQuestion = "What is your main brand?",
-                    securityAnswer = "Rakib Silk",
-                    isVerified = true
-                )
-            )
-        }
+        // No dummy data for real testing
     }
 
     // Authentication Logic
@@ -188,7 +128,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
             if (user != null) {
                 val enteredHash = hashPassword(passwordEntered)
-                if (user.password == enteredHash || user.password == passwordEntered) {
+                if ((user.password == enteredHash) || (user.password == passwordEntered)) {
                     if (!user.isVerified) {
                         _authState.value = AuthState.VerificationRequired(user.email)
                     } else {
@@ -201,15 +141,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Error("Incorrect password. Please try again.")
                 }
             } else {
-                // Fallback check for standard authorized accounts if they haven't been compiled yet
-                if (credential in authorizedEmails.map { it.lowercase() } && (passwordEntered == "password123" || hashPassword(passwordEntered) == hashPassword("password123"))) {
-                    _currentUserEmail.value = credential
-                    SareeApi.userEmailHeader = credential
-                    _authState.value = AuthState.Authorized
-                    prefs.edit { putString("logged_in_email", credential) }
-                } else {
-                    _authState.value = AuthState.Error("Staff account not found. Please Sign Up to register your credentials.")
-                }
+                _authState.value = AuthState.Error("Account not found. Please Sign Up to register.")
             }
         }
     }
@@ -218,14 +150,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         email: String,
         username: String,
         passwordEntered: String,
-        securityQuestion: String,
-        securityAnswer: String,
         callback: (Boolean, String) -> Unit
     ) {
         viewModelScope.launch {
             val trimmedEmail = email.trim().lowercase()
             val trimmedUsername = username.trim()
-            if (trimmedEmail.isEmpty() || trimmedUsername.isEmpty() || passwordEntered.isEmpty() || securityAnswer.isEmpty()) {
+            if (trimmedEmail.isEmpty() || trimmedUsername.isEmpty() || passwordEntered.isEmpty()) {
                 callback(false, "All fields are required!")
                 return@launch
             }
@@ -266,8 +196,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 email = trimmedEmail,
                 username = trimmedUsername,
                 password = hashPassword(passwordEntered),
-                securityQuestion = securityQuestion,
-                securityAnswer = securityAnswer.trim(),
+                securityQuestion = "",
+                securityAnswer = "",
                 isVerified = false,
                 verificationCode = generatedCode,
                 codeGeneratedAt = System.currentTimeMillis()
@@ -310,7 +240,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
             // Push the user to the MongoDB user collection
             try {
-                com.example.api.SareeApi.service.registerUserOnServer(
+                SareeApi.service.registerUserOnServer(
                     com.example.api.NetworkUserAuthRequest(verifiedUser.email, verifiedUser.password)
                 )
             } catch (e: Exception) {
@@ -335,7 +265,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
             val timeSinceLast = System.currentTimeMillis() - user.codeGeneratedAt
-            if (timeSinceLast < 2 * 60 * 1000L) { // 2 minutes cooldown
+            if (timeSinceLast < (2 * 60 * 1000L)) { // 2 minutes cooldown
                 val remainingSec = 120 - (timeSinceLast / 1000)
                 callback(false, "Please wait $remainingSec seconds before resending.")
                 return@launch
@@ -354,12 +284,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun verifySecurityAnswer(
-        email: String,
-        securityQuestion: String,
-        answer: String,
-        callback: (Boolean, String) -> Unit
-    ) {
+    fun sendRecoveryOtp(email: String, callback: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             val trimmed = email.trim().lowercase()
             val user = repository.getUserAccountByEmail(trimmed)
@@ -367,15 +292,58 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 callback(false, "Email address not found!")
                 return@launch
             }
-            if (user.securityQuestion != securityQuestion) {
-                callback(false, "Security question mismatch!")
+            val generatedCode = (100000..999999).random().toString()
+            val updatedUser = user.copy(verificationCode = generatedCode, codeGeneratedAt = System.currentTimeMillis())
+            repository.insertUserAccount(updatedUser)
+            val emailSent = repository.sendVerificationEmail(trimmed, generatedCode)
+            if (emailSent) {
+                callback(true, "A 6-digit OTP has been sent to your email!")
+            } else {
+                callback(false, "Failed to send OTP. Please check your internet connection.")
+            }
+        }
+    }
+
+    fun verifyRecoveryOtp(email: String, otp: String, callback: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val trimmed = email.trim().lowercase()
+            val user = repository.getUserAccountByEmail(trimmed)
+            if (user == null) {
+                callback(false, "Email address not found!")
                 return@launch
             }
-            if (user.securityAnswer.trim().equals(answer.trim(), ignoreCase = true)) {
-                callback(true, "Your password is: ${user.password}")
+            if (user.verificationCode == otp) {
+                val timeDiff = System.currentTimeMillis() - user.codeGeneratedAt
+                if (timeDiff > 10 * 60 * 1000) { // 10 mins expiry
+                    callback(false, "OTP has expired. Please request a new one.")
+                    return@launch
+                }
+                callback(true, "OTP verified successfully!")
             } else {
-                callback(false, "Answer is incorrect. Try again!")
+                callback(false, "Incorrect OTP!")
             }
+        }
+    }
+
+    fun resetPassword(email: String, newPassword: String, callback: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            val trimmed = email.trim().lowercase()
+            val user = repository.getUserAccountByEmail(trimmed)
+            if (user == null) {
+                callback(false, "Email address not found!")
+                return@launch
+            }
+            val updatedUser = user.copy(password = newPassword, verificationCode = null, codeGeneratedAt = 0L)
+            repository.insertUserAccount(updatedUser)
+
+            // Sync to backend
+            try {
+                SareeApi.service.registerUserOnServer(
+                    com.example.api.NetworkUserAuthRequest(updatedUser.email, updatedUser.password)
+                )
+            } catch (_: Exception) {}
+
+            callback(true, "Password reset successfully! You can now login.")
         }
     }
 

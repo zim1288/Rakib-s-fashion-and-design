@@ -1,10 +1,9 @@
 package com.example.ui.screens
 
-import com.example.ui.TallyViewModel
-import com.example.ui.AuthState
-
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +34,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
+import com.example.ui.AuthState
+import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -64,23 +65,16 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
     var signUpPasswordVisible by remember { mutableStateOf(false) }
     var signUpConfirmPassword by remember { mutableStateOf("") }
     var signUpConfirmPasswordVisible by remember { mutableStateOf(false) }
-    val signUpQuestions = remember {
-        listOf(
-            "What is your main brand?",
-            "What is your favorite color?",
-            "What is your birth city?",
-            "What is your first pet's name?",
-        )
-    }
-    var signUpQuestionIdx by remember { mutableIntStateOf(0) }
-    var signUpAnswer by remember { mutableStateOf("") }
     var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     // Forgot Password Fields
     var forgotEmail by remember { mutableStateOf("") }
-    var forgotQuestionIdx by remember { mutableIntStateOf(0) }
-    var forgotAnswer by remember { mutableStateOf("") }
     var forgotStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var isRecoveryOtpSent by remember { mutableStateOf(false) }
+    var isRecoveryOtpVerified by remember { mutableStateOf(false) }
+    var recoveryOtpText by remember { mutableStateOf("") }
+    var recoveryNewPassword by remember { mutableStateOf("") }
+    var recoveryNewPasswordVisible by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -123,9 +117,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                     fontFamily = FontFamily.Serif
                 ),
                 color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -147,9 +139,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Text(
                                 text = "Sign In To Account",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -283,9 +273,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Text(
                                 text = "Create Staff Account",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -381,47 +369,6 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
 
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Security Question Cycling Row
-                            OutlinedTextField(
-                                value = signUpQuestions[signUpQuestionIdx],
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Security Question (Tap to Switch)") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
-                                trailingIcon = {
-                                    IconButton(onClick = {
-                                        signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size
-                                    }) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = RoyalCrimson)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size }
-                                    .testTag("signup_question_tap"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = RoyalCrimson,
-                                    focusedLabelColor = RoyalCrimson
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            OutlinedTextField(
-                                value = signUpAnswer,
-                                onValueChange = { signUpAnswer = it },
-                                label = { Text("Security Answer") },
-                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = RoyalCrimson) },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("signup_answer_input"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = RoyalCrimson,
-                                    focusedLabelColor = RoyalCrimson
-                                )
-                            )
-
                             signUpStatusMessage?.let { (isSuccess, message) ->
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Card(
@@ -451,9 +398,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                         viewModel.registerUser(
                                             email = signUpEmail,
                                             username = signUpUsername,
-                                            passwordEntered = signUpPassword,
-                                            securityQuestion = signUpQuestions[signUpQuestionIdx],
-                                            securityAnswer = signUpAnswer
+                                            passwordEntered = signUpPassword
                                         ) { success, msg ->
                                             signUpStatusMessage = Pair(success, msg)
                                             if (success) {
@@ -462,7 +407,6 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                                 signUpUsername = ""
                                                 signUpPassword = ""
                                                 signUpConfirmPassword = ""
-                                                signUpAnswer = ""
                                             }
                                         }
                                     }
@@ -501,9 +445,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Text(
                                 text = "Recover Your Password",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurface
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -524,47 +466,148 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 )
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            if (!isRecoveryOtpVerified) {
+                                Spacer(modifier = Modifier.height(8.dp))
 
-                            OutlinedTextField(
-                                value = signUpQuestions[forgotQuestionIdx],
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Select Security Question") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
-                                trailingIcon = {
-                                    IconButton(onClick = {
-                                        forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size
-                                    }) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = RoyalCrimson)
+                                if (!isRecoveryOtpSent) {
+                                    Button(
+                                        onClick = {
+                                            focusManager.clearFocus()
+                                            if (forgotEmail.isBlank()) {
+                                                forgotStatusMessage = Pair(false, "Please enter your registered email.")
+                                                return@Button
+                                            }
+                                            viewModel.sendRecoveryOtp(forgotEmail) { isSuccess, resultText ->
+                                                forgotStatusMessage = Pair(isSuccess, resultText)
+                                                if (isSuccess) isRecoveryOtpSent = true
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .testTag("forgot_send_otp_btn"),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = RoyalCrimson,
+                                            contentColor = Color.White
+                                        ),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("SEND OTP", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                                     }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size }
-                                    .testTag("forgot_question_tap"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = RoyalCrimson,
-                                    focusedLabelColor = RoyalCrimson
+                                } else {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    androidx.compose.foundation.text.BasicTextField(
+                                        value = recoveryOtpText,
+                                        onValueChange = { if (it.length <= 6 && it.all { char -> char.isDigit() }) recoveryOtpText = it },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        modifier = Modifier.fillMaxWidth().testTag("forgot_otp_input"),
+                                        decorationBox = {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                for (i in 0 until 6) {
+                                                    val char = if (i < recoveryOtpText.length) recoveryOtpText[i].toString() else ""
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .padding(horizontal = 4.dp)
+                                                            .height(56.dp)
+                                                            .border(
+                                                                1.dp,
+                                                                if (char.isNotEmpty()) RoyalCrimson else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                                                RoundedCornerShape(8.dp)
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Text(text = char, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Button(
+                                        onClick = {
+                                            focusManager.clearFocus()
+                                            if (recoveryOtpText.length != 6) {
+                                                forgotStatusMessage = Pair(false, "Please enter 6-digit OTP")
+                                                return@Button
+                                            }
+                                            viewModel.verifyRecoveryOtp(forgotEmail, recoveryOtpText) { isSuccess, resultText ->
+                                                forgotStatusMessage = Pair(isSuccess, resultText)
+                                                if (isSuccess) isRecoveryOtpVerified = true
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .testTag("forgot_confirm_otp_btn"),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = RoyalCrimson,
+                                            contentColor = Color.White
+                                        ),
+                                        shape = RoundedCornerShape(10.dp)
+                                    ) {
+                                        Text("CONFIRM OTP", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                    }
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedTextField(
+                                    value = recoveryNewPassword,
+                                    onValueChange = { recoveryNewPassword = it },
+                                    label = { Text("New Password") },
+                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "New Password", tint = RoyalCrimson) },
+                                    singleLine = true,
+                                    visualTransformation = if (recoveryNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    trailingIcon = {
+                                        val image = if (recoveryNewPasswordVisible) Icons.Default.Lock else Icons.Default.Lock // Just simple toggle
+                                        IconButton(onClick = { recoveryNewPasswordVisible = !recoveryNewPasswordVisible }) {
+                                            Icon(imageVector = image, contentDescription = "Toggle password visibility", tint = RoyalCrimson)
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth().testTag("forgot_new_password_input"),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = RoyalCrimson,
+                                        focusedLabelColor = RoyalCrimson
+                                    )
                                 )
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            OutlinedTextField(
-                                value = forgotAnswer,
-                                onValueChange = { forgotAnswer = it },
-                                label = { Text("Security Answer") },
-                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = RoyalCrimson) },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .testTag("forgot_answer_input"),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = RoyalCrimson,
-                                    focusedLabelColor = RoyalCrimson
-                                )
-                            )
+                                Spacer(modifier = Modifier.height(14.dp))
+                                Button(
+                                    onClick = {
+                                        focusManager.clearFocus()
+                                        if (recoveryNewPassword.length < 6) {
+                                            forgotStatusMessage = Pair(false, "Password must be at least 6 characters")
+                                            return@Button
+                                        }
+                                        viewModel.resetPassword(forgotEmail, recoveryNewPassword) { isSuccess, resultText ->
+                                            forgotStatusMessage = Pair(isSuccess, resultText)
+                                            if (isSuccess) {
+                                                // Reset state and switch back to sign in mode after 2 seconds
+                                                isRecoveryOtpSent = false
+                                                isRecoveryOtpVerified = false
+                                                forgotEmail = ""
+                                                recoveryOtpText = ""
+                                                recoveryNewPassword = ""
+                                                mode = AuthMode.SIGN_IN
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag("forgot_reset_password_btn"),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = RoyalCrimson,
+                                        contentColor = Color.White
+                                    ),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text("RESET PASSWORD", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                }
+                            }
 
                             forgotStatusMessage?.let { (isSuccess, message) ->
                                 Spacer(modifier = Modifier.height(6.dp))
@@ -584,32 +627,6 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            Button(
-                                onClick = {
-                                    focusManager.clearFocus()
-                                    viewModel.verifySecurityAnswer(
-                                        email = forgotEmail,
-                                        securityQuestion = signUpQuestions[forgotQuestionIdx],
-                                        answer = forgotAnswer
-                                    ) { isSuccess, resultText ->
-                                        forgotStatusMessage = Pair(isSuccess, resultText)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("forgot_btn_submit"),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = RoyalCrimson,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text("RECOVER SECURITY LOCK", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-                            }
-
                             Spacer(modifier = Modifier.height(10.dp))
 
                             TextButton(
@@ -627,34 +644,6 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Help info box describing default test login
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)),
-                border = BorderStroke(1.dp, AntiqueCream),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("default_staff_info_card")
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "💡 Quick Testing Credentials",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "User/Email: watchdogs27777@gmail.com\nPassword: password123\n\nOr feel free to sign up a brand new user account directly!",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(30.dp))
         }
     }
@@ -668,7 +657,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
 
     LaunchedEffect(key1 = secondsRemaining) {
         if (secondsRemaining > 0) {
-            kotlinx.coroutines.delay(1000L)
+            kotlinx.coroutines.delay(1000)
             secondsRemaining -= 1
         }
     }
@@ -829,7 +818,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
 
                     if (secondsRemaining > 0) {
                         Text(
-                            text = "Resend code in ${secondsRemaining / 60}:${String.format(Locale.US, "%02d", secondsRemaining % 60)}",
+                            text = "Resend code in ${secondsRemaining / 60}:${String.format(Locale.getDefault(), "%02d", secondsRemaining % 60)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )

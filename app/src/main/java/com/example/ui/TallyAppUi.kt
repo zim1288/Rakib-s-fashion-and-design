@@ -1,7 +1,12 @@
 package com.example.ui
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -28,9 +33,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
-import com.example.ui.screens.AuthorizedLayout
-import com.example.ui.screens.LoginScreen
 import com.example.ui.theme.*
+import com.example.ui.screens.*
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -45,12 +49,12 @@ fun TallyAppUi(viewModel: TallyViewModel) {
         modifier = Modifier
             .fillMaxSize()
             .testTag("app_scaffold"),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
         ) {
             AnimatedContent(
                 targetState = authState,
