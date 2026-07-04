@@ -1,8 +1,8 @@
 package com.example.ui
 
 import android.app.Application
-import androidx.core.content.edit
 import androidx.compose.runtime.mutableStateListOf
+import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.TallyApplication
@@ -36,7 +36,7 @@ data class CartItem(
     val brandCategory: String, // "Rakib Fashion" or "Rakib Silk"
     val unitCost: Double,
     val quantity: Int,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
 )
 
 class TallyViewModel(application: Application) : AndroidViewModel(application) {
@@ -76,10 +76,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setDarkMode(isDark: Boolean?) {
         _isDarkMode.value = isDark
-        if (isDark == null) {
-            prefs.edit { remove("is_dark_mode") }
-        } else {
-            prefs.edit { putBoolean("is_dark_mode", isDark) }
+        prefs.edit {
+            if (isDark == null) {
+                remove("is_dark_mode")
+            } else {
+                putBoolean("is_dark_mode", isDark)
+            }
         }
     }
 
@@ -305,6 +307,16 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             // Successfully verified!
             val verifiedUser = user.copy(isVerified = true, verificationCode = null, codeGeneratedAt = 0L)
             repository.insertUserAccount(verifiedUser)
+
+            // Push the user to the MongoDB user collection
+            try {
+                com.example.api.SareeApi.service.registerUserOnServer(
+                    com.example.api.NetworkUserAuthRequest(verifiedUser.email, verifiedUser.password)
+                )
+            } catch (e: Exception) {
+                // If it fails, we still allow local login, but log it
+                android.util.Log.e("TallyViewModel", "Failed to sync user to production DB", e)
+            }
 
             _currentUserEmail.value = verifiedUser.email
             SareeApi.userEmailHeader = verifiedUser.email

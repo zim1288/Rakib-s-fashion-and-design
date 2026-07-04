@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -68,7 +67,7 @@ fun DashboardScreen(viewModel: TallyViewModel) {
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = "TOTAL STOCK VALUATION",
@@ -91,7 +90,13 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Active Models", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
-                            Text("${sarees.size}", style = MaterialTheme.typography.titleMedium, color = SoftEggshell, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(
+                            sarees.size.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SoftEggshell,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Total Weaving", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)

@@ -13,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -241,12 +240,11 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
     itemToEdit?.let { item ->
         EditItemDialog(
             item = item,
-            onDismiss = { itemToEdit = null },
-            onConfirm = { name, category, price, count, imageUrl ->
-                viewModel.updateStockItemDetails(item.id, name, category, price, count, imageUrl)
-                itemToEdit = null
-            }
-        )
+            onDismiss = { itemToEdit = null }
+        ) { name, category, price, count, imageUrl ->
+            viewModel.updateStockItemDetails(item.id, name, category, price, count, imageUrl)
+            itemToEdit = null
+        }
     }
 }
 

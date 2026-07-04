@@ -18,7 +18,8 @@ data class NetworkSareeItem(
     val brandCategory: String,
     val unitPrice: Double,
     val pieceCount: Int,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val email: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -28,7 +29,8 @@ data class NetworkProductionItem(
     val quantity: Int,
     val estimatedCompletionDate: String,
     val status: String,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val email: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -40,13 +42,20 @@ data class NetworkTransactionLog(
     val unitPrice: Double,
     val totalAmount: Double,
     val timestamp: Long,
-    val dateString: String
+    val dateString: String,
+    val email: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class NetworkEmailRequest(
     val email: String,
     val code: String
+)
+
+@JsonClass(generateAdapter = true)
+data class NetworkUserAuthRequest(
+    val email: String,
+    val password: String
 )
 
 interface SareeApiService {
@@ -76,6 +85,9 @@ interface SareeApiService {
 
     @POST("auth/send-verification")
     suspend fun sendVerificationEmail(@Body request: NetworkEmailRequest): Response<Unit>
+
+    @POST("auth/register")
+    suspend fun registerUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
 }
 
 object SareeApi {
@@ -149,6 +161,10 @@ object SareeApi {
             }
             override suspend fun sendVerificationEmail(request: NetworkEmailRequest): Response<Unit> {
                 Log.d(TAG, "Mock SMTP: Sent verification email with code ${request.code} to ${request.email}")
+                return Response.success(Unit)
+            }
+            override suspend fun registerUserOnServer(request: NetworkUserAuthRequest): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Registered user ${request.email} successfully.")
                 return Response.success(Unit)
             }
         }

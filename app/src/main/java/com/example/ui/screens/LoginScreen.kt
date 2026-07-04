@@ -5,7 +5,6 @@ import com.example.ui.AuthState
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,16 +69,16 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
             "What is your main brand?",
             "What is your favorite color?",
             "What is your birth city?",
-            "What is your first pet's name?"
+            "What is your first pet's name?",
         )
     }
-    var signUpQuestionIdx by remember { mutableStateOf(0) }
+    var signUpQuestionIdx by remember { mutableIntStateOf(0) }
     var signUpAnswer by remember { mutableStateOf("") }
     var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     // Forgot Password Fields
     var forgotEmail by remember { mutableStateOf("") }
-    var forgotQuestionIdx by remember { mutableStateOf(0) }
+    var forgotQuestionIdx by remember { mutableIntStateOf(0) }
     var forgotAnswer by remember { mutableStateOf("") }
     var forgotStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
@@ -665,7 +664,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
 fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
     var verificationCodeInput by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
-    var secondsRemaining by remember { mutableStateOf(120) }
+    var secondsRemaining by remember { mutableIntStateOf(120) }
 
     LaunchedEffect(key1 = secondsRemaining) {
         if (secondsRemaining > 0) {

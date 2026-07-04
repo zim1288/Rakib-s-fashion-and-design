@@ -87,7 +87,7 @@ class TallyRepository(private val tallyDao: TallyDao) {
                         brandCategory = item.brandCategory,
                         unitPrice = item.unitPrice,
                         pieceCount = item.pieceCount,
-                        imageUrl = item.imageUrl
+                        imageUrl = item.imageUrl,
                     )
                 )
                 if (response.isSuccessful) {
@@ -132,7 +132,7 @@ class TallyRepository(private val tallyDao: TallyDao) {
                             quantity = item.quantity,
                             estimatedCompletionDate = item.estimatedCompletionDate,
                             status = item.status,
-                            imageUrl = item.imageUrl
+                            imageUrl = item.imageUrl,
                         )
                     )
                 )
@@ -182,16 +182,18 @@ class TallyRepository(private val tallyDao: TallyDao) {
             val sarees = tallyDao.getAllSareeItems().first()
             val prodItems = tallyDao.getAllProductionItems().first()
 
-            SareeApi.service.syncInventory(sarees.map {
-                NetworkSareeItem(
-                    id = it.id,
-                    modelName = it.modelName,
-                    brandCategory = it.brandCategory,
-                    unitPrice = it.unitPrice,
-                    pieceCount = it.pieceCount,
-                    imageUrl = it.imageUrl
-                )
-            })
+            SareeApi.service.syncInventory(
+                sarees.map {
+                    NetworkSareeItem(
+                        id = it.id,
+                        modelName = it.modelName,
+                        brandCategory = it.brandCategory,
+                        unitPrice = it.unitPrice,
+                        pieceCount = it.pieceCount,
+                        imageUrl = it.imageUrl
+                    )
+                }
+            )
 
             SareeApi.service.syncProduction(prodItems.map {
                 NetworkProductionItem(
