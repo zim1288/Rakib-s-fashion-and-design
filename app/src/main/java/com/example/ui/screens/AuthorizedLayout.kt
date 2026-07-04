@@ -56,7 +56,7 @@ fun AuthorizedLayout(viewModel: TallyViewModel, currentScreen: String, syncState
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
+                .weight(1f),
         ) {
             when (currentScreen) {
                 "DASHBOARD" -> DashboardScreen(viewModel)
@@ -112,7 +112,9 @@ fun TopBanner(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Serif
                             ),
-                            color = GoldAccent
+                            color = GoldAccent,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

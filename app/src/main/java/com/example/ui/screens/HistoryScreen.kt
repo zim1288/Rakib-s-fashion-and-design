@@ -70,7 +70,7 @@ fun HistoryScreen(viewModel: TallyViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         Text("Central Ledger & Analytics", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
@@ -132,12 +132,12 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("TOTAL SPENT (PURCHASES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f))
-                        Text("৳ ${formatCurrency(totalSpent)}", style = MaterialTheme.typography.titleMedium, color = CardinalRed, fontWeight = FontWeight.Bold)
+                        Text("TOTAL SPENT (PURCHASES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
+                        Text("৳ ${formatCurrency(totalSpent)}", style = MaterialTheme.typography.titleMedium, color = CardinalRed, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("TOTAL EARNED (SALES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f))
-                        Text("৳ ${formatCurrency(totalEarned)}", style = MaterialTheme.typography.titleMedium, color = Color.Green, fontWeight = FontWeight.Bold)
+                        Text("TOTAL EARNED (SALES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
+                        Text("৳ ${formatCurrency(totalEarned)}", style = MaterialTheme.typography.titleMedium, color = Color.Green, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
 
@@ -161,7 +161,9 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                         Text(
                             text = "${if (isProfit) "PROFIT: +" else "LOSS: "}৳${formatCurrency(netProfitLoss)}",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -208,14 +210,21 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = if (log.type == "EXPENSE") "EXPENSE" else if (log.type == "SALE") "RETAIL SALES" else "SYSTEM LOG",
                                         color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Blue,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                        maxLines = 1
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Text(log.dateString, style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                    Text(
+                                        text = log.dateString,
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
 
@@ -223,12 +232,16 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                 Text(
                                     text = if (isIncome) "+৳${formatCurrency(log.totalAmount)}" else if (log.type == "EXPENSE") "-৳${formatCurrency(log.totalAmount)}" else "Update",
                                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Gray
+                                    color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Gray,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = "${log.quantity} pcs @ ৳${formatCurrency(log.unitPrice)}",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }

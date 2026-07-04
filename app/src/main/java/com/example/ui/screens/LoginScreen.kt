@@ -1,10 +1,15 @@
 package com.example.ui.screens
 
+import com.example.ui.TallyViewModel
+import com.example.ui.AuthState
+
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -14,7 +19,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -23,12 +30,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.ui.AuthState
-import com.example.ui.TallyViewModel
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.db.*
 import com.example.ui.theme.*
+import java.text.NumberFormat
 import java.util.Locale
-import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalAnimationApi::class)
 enum class AuthMode { SIGN_IN, SIGN_UP, FORGOT_PASSWORD }
@@ -44,8 +54,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
     val focusManager = LocalFocusManager.current
 
     // Sign In Fields
-    var loginUserOrEmail by remember { mutableStateOf("") }
-    var loginPassword by remember { mutableStateOf("") }
+    var loginUserOrEmail by remember { mutableStateOf("watchdogs27777@gmail.com") }
+    var loginPassword by remember { mutableStateOf("password123") }
     var loginPasswordVisible by remember { mutableStateOf(false) }
 
     // Sign Up Fields
@@ -53,6 +63,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
     var signUpUsername by remember { mutableStateOf("") }
     var signUpPassword by remember { mutableStateOf("") }
     var signUpPasswordVisible by remember { mutableStateOf(false) }
+    var signUpConfirmPassword by remember { mutableStateOf("") }
+    var signUpConfirmPasswordVisible by remember { mutableStateOf(false) }
     val signUpQuestions = remember {
         listOf(
             "What is your main brand?",
@@ -61,13 +73,13 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
             "What is your first pet's name?"
         )
     }
-    var signUpQuestionIdx by remember { mutableIntStateOf(0) }
+    var signUpQuestionIdx by remember { mutableStateOf(0) }
     var signUpAnswer by remember { mutableStateOf("") }
     var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
     // Forgot Password Fields
     var forgotEmail by remember { mutableStateOf("") }
-    var forgotQuestionIdx by remember { mutableIntStateOf(0) }
+    var forgotQuestionIdx by remember { mutableStateOf(0) }
     var forgotAnswer by remember { mutableStateOf("") }
     var forgotStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
 
@@ -112,7 +124,9 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                     fontFamily = FontFamily.Serif
                 ),
                 color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -134,7 +148,9 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Text(
                                 text = "Sign In To Account",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -143,16 +159,14 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = loginUserOrEmail,
                                 onValueChange = { loginUserOrEmail = it },
                                 label = { Text("Email or Username") },
-                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Email/Username", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Email/Username", tint = RoyalCrimson) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("login_username_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -162,13 +176,13 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = loginPassword,
                                 onValueChange = { loginPassword = it },
                                 label = { Text("Password") },
-                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = { loginPasswordVisible = !loginPasswordVisible }) {
                                         Icon(
                                             imageVector = if (loginPasswordVisible) Icons.Default.Info else Icons.Default.Lock,
                                             contentDescription = "Toggle password visibility",
-                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                            tint = RoyalCrimson.copy(alpha = 0.6f)
                                         )
                                     }
                                 },
@@ -179,10 +193,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .fillMaxWidth()
                                     .testTag("login_password_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -200,7 +212,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 ) {
                                     Text(
                                         text = "Forgot Password?",
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = RoyalCrimson,
                                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
                                     )
                                 }
@@ -235,13 +247,13 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .height(48.dp)
                                     .testTag("login_btn_submit"),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                    containerColor = RoyalCrimson,
+                                    contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
                                 if (authState is AuthState.Authenticating) {
-                                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                                 } else {
                                     Text("AUTHENTICATE & ENTER", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                                 }
@@ -263,7 +275,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     },
                                     modifier = Modifier.testTag("sign_up_mode_btn")
                                 ) {
-                                    Text("Sign Up", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                    Text("Sign Up", color = RoyalCrimson, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                                 }
                             }
                         }
@@ -272,7 +284,9 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Text(
                                 text = "Create Staff Account",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -281,17 +295,15 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = signUpEmail,
                                 onValueChange = { signUpEmail = it },
                                 label = { Text("Email Address") },
-                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = RoyalCrimson) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("signup_email_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -301,16 +313,14 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = signUpUsername,
                                 onValueChange = { signUpUsername = it },
                                 label = { Text("Staff Username") },
-                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Username", tint = RoyalCrimson) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("signup_username_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -319,14 +329,14 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             OutlinedTextField(
                                 value = signUpPassword,
                                 onValueChange = { signUpPassword = it },
-                                label = { Text("Password (Min 4 chars)") },
-                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = MaterialTheme.colorScheme.primary) },
+                                label = { Text("Password (Min 8 chars, number & symbol)") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = { signUpPasswordVisible = !signUpPasswordVisible }) {
                                         Icon(
                                             imageVector = if (signUpPasswordVisible) Icons.Default.Info else Icons.Default.Lock,
                                             contentDescription = "Toggle password visibility",
-                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                            tint = RoyalCrimson.copy(alpha = 0.6f)
                                         )
                                     }
                                 },
@@ -337,10 +347,36 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .fillMaxWidth()
                                     .testTag("signup_password_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = signUpConfirmPassword,
+                                onValueChange = { signUpConfirmPassword = it },
+                                label = { Text("Confirm Password") },
+                                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Confirm Password", tint = RoyalCrimson) },
+                                trailingIcon = {
+                                    IconButton(onClick = { signUpConfirmPasswordVisible = !signUpConfirmPasswordVisible }) {
+                                        Icon(
+                                            imageVector = if (signUpConfirmPasswordVisible) Icons.Default.Info else Icons.Default.Lock,
+                                            contentDescription = "Toggle confirm password visibility",
+                                            tint = RoyalCrimson.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                },
+                                visualTransformation = if (signUpConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("signup_confirm_password_input"),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -352,12 +388,12 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Security Question (Tap to Switch)") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size
                                     }) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = RoyalCrimson)
                                     }
                                 },
                                 modifier = Modifier
@@ -365,10 +401,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .clickable { signUpQuestionIdx = (signUpQuestionIdx + 1) % signUpQuestions.size }
                                     .testTag("signup_question_tap"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -378,16 +412,14 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = signUpAnswer,
                                 onValueChange = { signUpAnswer = it },
                                 label = { Text("Security Answer") },
-                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = RoyalCrimson) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("signup_answer_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -414,20 +446,25 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Button(
                                 onClick = {
                                     focusManager.clearFocus()
-                                    viewModel.registerUser(
-                                        email = signUpEmail,
-                                        username = signUpUsername,
-                                        passwordEntered = signUpPassword,
-                                        securityQuestion = signUpQuestions[signUpQuestionIdx],
-                                        securityAnswer = signUpAnswer
-                                    ) { success, msg ->
-                                        signUpStatusMessage = Pair(success, msg)
-                                        if (success) {
-                                            // Reset fields
-                                            signUpEmail = ""
-                                            signUpUsername = ""
-                                            signUpPassword = ""
-                                            signUpAnswer = ""
+                                    if (signUpPassword != signUpConfirmPassword) {
+                                        signUpStatusMessage = Pair(false, "Passwords do not match!")
+                                    } else {
+                                        viewModel.registerUser(
+                                            email = signUpEmail,
+                                            username = signUpUsername,
+                                            passwordEntered = signUpPassword,
+                                            securityQuestion = signUpQuestions[signUpQuestionIdx],
+                                            securityAnswer = signUpAnswer
+                                        ) { success, msg ->
+                                            signUpStatusMessage = Pair(success, msg)
+                                            if (success) {
+                                                // Reset fields
+                                                signUpEmail = ""
+                                                signUpUsername = ""
+                                                signUpPassword = ""
+                                                signUpConfirmPassword = ""
+                                                signUpAnswer = ""
+                                            }
                                         }
                                     }
                                 },
@@ -436,8 +473,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .height(48.dp)
                                     .testTag("signup_btn_submit"),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                    containerColor = RoyalCrimson,
+                                    contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
@@ -456,7 +493,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     onClick = { mode = AuthMode.SIGN_IN },
                                     modifier = Modifier.testTag("back_to_signin_btn")
                                 ) {
-                                    Text("Sign In", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                    Text("Sign In", color = RoyalCrimson, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                                 }
                             }
                         }
@@ -465,7 +502,9 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                             Text(
                                 text = "Recover Your Password",
                                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
 
                             Spacer(modifier = Modifier.height(14.dp))
@@ -474,17 +513,15 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = forgotEmail,
                                 onValueChange = { forgotEmail = it },
                                 label = { Text("Registered Email Address") },
-                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = RoyalCrimson) },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("forgot_email_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -495,12 +532,12 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Select Security Question") },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Question", tint = RoyalCrimson) },
                                 trailingIcon = {
                                     IconButton(onClick = {
                                         forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size
                                     }) {
-                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                        Icon(Icons.Default.Refresh, contentDescription = "Cycle Question", tint = RoyalCrimson)
                                     }
                                 },
                                 modifier = Modifier
@@ -508,10 +545,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .clickable { forgotQuestionIdx = (forgotQuestionIdx + 1) % signUpQuestions.size }
                                     .testTag("forgot_question_tap"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -521,16 +556,14 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 value = forgotAnswer,
                                 onValueChange = { forgotAnswer = it },
                                 label = { Text("Security Answer") },
-                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = MaterialTheme.colorScheme.primary) },
+                                leadingIcon = { Icon(Icons.Default.Star, contentDescription = "Security Answer", tint = RoyalCrimson) },
                                 singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("forgot_answer_input"),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    focusedBorderColor = RoyalCrimson,
+                                    focusedLabelColor = RoyalCrimson
                                 )
                             )
 
@@ -570,8 +603,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .height(48.dp)
                                     .testTag("forgot_btn_submit"),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                    containerColor = RoyalCrimson,
+                                    contentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
@@ -586,7 +619,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     .fillMaxWidth()
                                     .testTag("forgot_back_to_signin_btn")
                             ) {
-                                Text("Back to Sign In", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                                Text("Back to Sign In", color = RoyalCrimson, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             }
                         }
                     }
@@ -632,11 +665,11 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
 fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
     var verificationCodeInput by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
-    var secondsRemaining by remember { mutableIntStateOf(120) }
+    var secondsRemaining by remember { mutableStateOf(120) }
 
     LaunchedEffect(key1 = secondsRemaining) {
         if (secondsRemaining > 0) {
-            kotlinx.coroutines.delay(1.seconds)
+            kotlinx.coroutines.delay(1000L)
             secondsRemaining -= 1
         }
     }
@@ -737,17 +770,15 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                             }
                         },
                         label = { Text("6-Digit Code") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Code", tint = MaterialTheme.colorScheme.primary) },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Code", tint = RoyalCrimson) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("verification_code_input"),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            focusedBorderColor = RoyalCrimson,
+                            focusedLabelColor = RoyalCrimson
                         )
                     )
 
@@ -787,8 +818,8 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                             .height(48.dp)
                             .testTag("verify_code_submit_btn"),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = RoyalCrimson,
+                            contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -799,7 +830,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
 
                     if (secondsRemaining > 0) {
                         Text(
-                            text = "Resend code in ${secondsRemaining / 60}:${String.format(Locale.getDefault(), "%02d", secondsRemaining % 60)}",
+                            text = "Resend code in ${secondsRemaining / 60}:${String.format(Locale.US, "%02d", secondsRemaining % 60)}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
@@ -818,7 +849,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                         ) {
                             Text(
                                 "Resend Code",
-                                color = MaterialTheme.colorScheme.primary,
+                                color = RoyalCrimson,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                             )
                         }
@@ -839,13 +870,13 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = RoyalCrimson,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         "Back to Sign In",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = RoyalCrimson,
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }

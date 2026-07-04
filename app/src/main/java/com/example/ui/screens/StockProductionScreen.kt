@@ -54,15 +54,13 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            imageUrlInput = uri.toString()
-        }
+        uri?.let { imageUrlInput = it.toString() }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -257,12 +255,28 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                                     Text(
                                         text = item.status,
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = statusColor
+                                        color = statusColor,
+                                        maxLines = 1
                                     )
                                 }
-                                Text(item.modelName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-                                Text("Quantity Target: ${item.quantity} pieces", style = MaterialTheme.typography.bodySmall)
-                                Text("Weaver Completion: ${item.estimatedCompletionDate}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                Text(
+                                    text = item.modelName,
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "Target: ${item.quantity} pieces",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1
+                                )
+                                Text(
+                                    text = "Est: ${item.estimatedCompletionDate}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
                             }
 
                             // Interactive toggle switch

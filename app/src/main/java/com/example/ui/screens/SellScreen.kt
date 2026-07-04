@@ -71,7 +71,7 @@ fun SellScreen(viewModel: TallyViewModel) {
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("sales_form_card")
+                    .testTag("sales_form_card"),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Retail Saree Entry Selection:", style = MaterialTheme.typography.labelSmall)
@@ -99,7 +99,13 @@ fun SellScreen(viewModel: TallyViewModel) {
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(currentSelectionName, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                text = currentSelectionName,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
                             Icon(
                                 if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                                 contentDescription = "Dropdown"
@@ -129,11 +135,27 @@ fun SellScreen(viewModel: TallyViewModel) {
                                             .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
                                     ) {
                                         Column {
-                                            Text(item.modelName, fontWeight = FontWeight.Bold)
+                                            Text(
+                                                text = item.modelName,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
                                             Row {
-                                                Text(item.brandCategory, color = MaterialTheme.colorScheme.primary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                Text(
+                                                    text = item.brandCategory,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 1
+                                                )
                                                 Spacer(modifier = Modifier.width(12.dp))
-                                                Text("Avail count: ${item.pieceCount} | Standard P: ৳${formatCurrency(item.unitPrice)}", fontSize = 11.sp)
+                                                Text(
+                                                    text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
+                                                    fontSize = 11.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
                                             }
                                         }
                                     }

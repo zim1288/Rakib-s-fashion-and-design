@@ -1,16 +1,25 @@
 package com.example.ui
 
 import android.app.Application
+import androidx.core.content.edit
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.core.content.edit
 import com.example.TallyApplication
 import com.example.db.*
+import com.example.api.SareeApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
+
+fun hashPassword(password: String): String {
+    val bytes = password.toByteArray()
+    val md = MessageDigest.getInstance("SHA-256")
+    val digest = md.digest(bytes)
+    return digest.joinToString("") { "%02x".format(it) }
+}
 
 // Auth status states
 sealed interface AuthState {
@@ -27,7 +36,7 @@ data class CartItem(
     val brandCategory: String, // "Rakib Fashion" or "Rakib Silk"
     val unitCost: Double,
     val quantity: Int,
-    val imageUrl: String? = null,
+    val imageUrl: String? = null
 )
 
 class TallyViewModel(application: Application) : AndroidViewModel(application) {
@@ -45,7 +54,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         "bookkeeper.faisal@gmail.com",
         "designer.rakib@gmail.com",
         "accounts.tally@rakibsilk.com",
-        "khata.supervisor@gmail.com",
+        "khata.supervisor@gmail.com"
     )
 
     private val prefs = application.getSharedPreferences("tally_prefs", android.content.Context.MODE_PRIVATE)
@@ -98,6 +107,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         val savedEmail = prefs.getString("logged_in_email", null)
         if (savedEmail != null) {
             _currentUserEmail.value = savedEmail
+            SareeApi.userEmailHeader = savedEmail
             _authState.value = AuthState.Authorized
         }
 
@@ -154,7 +164,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 UserAccount(
                     email = email,
                     username = username,
-                    password = "password123",
+                    password = hashPassword("password123"),
                     securityQuestion = "What is your main brand?",
                     securityAnswer = "Rakib Silk",
                     isVerified = true
@@ -175,11 +185,13 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             if (user != null) {
-                if (user.password == passwordEntered) {
+                val enteredHash = hashPassword(passwordEntered)
+                if (user.password == enteredHash || user.password == passwordEntered) {
                     if (!user.isVerified) {
                         _authState.value = AuthState.VerificationRequired(user.email)
                     } else {
                         _currentUserEmail.value = user.email
+                        SareeApi.userEmailHeader = user.email
                         _authState.value = AuthState.Authorized
                         prefs.edit { putString("logged_in_email", user.email) }
                     }
@@ -188,8 +200,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 }
             } else {
                 // Fallback check for standard authorized accounts if they haven't been compiled yet
-                if ((credential in authorizedEmails.map { it.lowercase() }) && (passwordEntered == "password123")) {
+                if (credential in authorizedEmails.map { it.lowercase() } && (passwordEntered == "password123" || hashPassword(passwordEntered) == hashPassword("password123"))) {
                     _currentUserEmail.value = credential
+                    SareeApi.userEmailHeader = credential
                     _authState.value = AuthState.Authorized
                     prefs.edit { putString("logged_in_email", credential) }
                 } else {
@@ -222,8 +235,13 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 callback(false, "Username must be at least 3 characters!")
                 return@launch
             }
-            if (passwordEntered.length < 4) {
-                callback(false, "Password must be at least 4 characters!")
+
+            // Strong password policy validation
+            val hasMinLength = passwordEntered.length >= 8
+            val hasDigit = passwordEntered.any { it.isDigit() }
+            val hasSymbol = passwordEntered.any { !it.isLetterOrDigit() }
+            if (!hasMinLength || !hasDigit || !hasSymbol) {
+                callback(false, "Password must be at least 8 characters long and contain both numbers and symbols!")
                 return@launch
             }
 
@@ -245,7 +263,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             val newUser = UserAccount(
                 email = trimmedEmail,
                 username = trimmedUsername,
-                password = passwordEntered,
+                password = hashPassword(passwordEntered),
                 securityQuestion = securityQuestion,
                 securityAnswer = securityAnswer.trim(),
                 isVerified = false,
@@ -278,7 +296,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 callback(false, "Incorrect verification code. Please try again.")
                 return@launch
             }
-            val isExpired = (System.currentTimeMillis() - user.codeGeneratedAt) > (30 * 60 * 1000L) // 30 mins
+            val isExpired = System.currentTimeMillis() - user.codeGeneratedAt > 30 * 60 * 1000L // 30 mins
             if (isExpired) {
                 callback(false, "Verification code expired. Please click Resend Code.")
                 return@launch
@@ -289,6 +307,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(verifiedUser)
 
             _currentUserEmail.value = verifiedUser.email
+            SareeApi.userEmailHeader = verifiedUser.email
             _authState.value = AuthState.Authorized
             prefs.edit { putString("logged_in_email", verifiedUser.email) }
 
@@ -340,7 +359,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 callback(false, "Security question mismatch!")
                 return@launch
             }
-            if (user.securityAnswer.equals(answer.trim(), ignoreCase = true)) {
+            if (user.securityAnswer.trim().equals(answer.trim(), ignoreCase = true)) {
                 callback(true, "Your password is: ${user.password}")
             } else {
                 callback(false, "Answer is incorrect. Try again!")
@@ -350,6 +369,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         _currentUserEmail.value = ""
+        SareeApi.userEmailHeader = ""
         _authState.value = AuthState.NotLoggedIn
         _currentScreen.value = "DASHBOARD"
         prefs.edit { remove("logged_in_email") }
@@ -479,12 +499,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 if (existing != null) {
-                    repository.updateSareeItem(
-                        existing.copy(
-                            pieceCount = existing.pieceCount + item.quantity,
-                            imageUrl = item.imageUrl ?: existing.imageUrl,
-                        ),
-                    )
+                    repository.updateSareeItem(existing.copy(
+                        pieceCount = existing.pieceCount + item.quantity,
+                        imageUrl = item.imageUrl ?: existing.imageUrl
+                    ))
                 } else {
                     repository.insertSareeItem(
                         SareeItem(
@@ -530,13 +548,15 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateStockItemDetails(id: Int, name: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
         viewModelScope.launch {
+            val existing = sareeItems.value.firstOrNull { it.id == id }
+            val finalImageUrl = if (imageUrl.isNullOrBlank()) existing?.imageUrl else imageUrl
             val updated = SareeItem(
                 id = id,
                 modelName = name,
                 brandCategory = category,
                 unitPrice = price,
                 pieceCount = count,
-                imageUrl = imageUrl
+                imageUrl = finalImageUrl
             )
             repository.updateSareeItem(updated)
         }

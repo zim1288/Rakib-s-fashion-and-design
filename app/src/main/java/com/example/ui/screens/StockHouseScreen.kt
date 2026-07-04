@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.TallyViewModel
+
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -37,7 +39,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.example.db.*
-import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -56,7 +57,7 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         // Instant Live Valuation banner
         Card(
@@ -69,7 +70,14 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text("$selectedBrand Total Valuation", style = MaterialTheme.typography.bodyMedium, color = GoldAccent)
-                Text("৳ ${formatCurrency(valuation)}", style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                Text(
+                    text = "৳ ${formatCurrency(valuation)}",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
 
@@ -164,21 +172,42 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                                 Text(
                                     text = item.modelName,
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    Text("Unit Cost: ৳${formatCurrency(item.unitPrice)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                                    Text("Stock: ${item.pieceCount} pcs", style = MaterialTheme.typography.bodySmall, color = stockTextColor, fontWeight = FontWeight.SemiBold)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Unit: ৳${formatCurrency(item.unitPrice)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = "${item.pieceCount} pcs",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = stockTextColor,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1
+                                    )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.width(8.dp))
 
                             // Interactive Total Value label and actions
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     text = "৳ ${formatCurrency(item.totalValue)}",
                                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = RoyalCrimson
+                                    color = RoyalCrimson,
+                                    textAlign = TextAlign.End,
+                                    maxLines = 1
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Row {
@@ -190,7 +219,7 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                                     ) {
                                         Icon(Icons.Default.Edit, contentDescription = "Edit", tint = GoldAccent, modifier = Modifier.size(18.dp))
                                     }
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     IconButton(
                                         onClick = { viewModel.deleteStockItem(item) },
                                         modifier = Modifier
@@ -234,9 +263,7 @@ fun EditItemDialog(
     var imageUrl by remember { mutableStateOf(item.imageUrl) }
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            imageUrl = uri.toString()
-        }
+        uri?.let { imageUrl = it.toString() }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -275,7 +302,7 @@ fun EditItemDialog(
                         Button(
                             onClick = { brandCategory = brand },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (active) TobaccoSaddle else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                containerColor = if (active) RoyalCrimson else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                                 contentColor = if (active) Color.White else MaterialTheme.colorScheme.onSurface
                             ),
                             modifier = Modifier.weight(1f)
