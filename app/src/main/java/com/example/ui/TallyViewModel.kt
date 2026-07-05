@@ -205,7 +205,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(newUser)
 
             // Trigger Verification Email asynchronously so UI is not blocked
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            launch(kotlinx.coroutines.Dispatchers.IO) {
                 repository.sendVerificationEmail(trimmedEmail, generatedCode)
             }
 
@@ -273,7 +273,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(updatedUser)
 
             // Trigger Verification Email asynchronously so UI is not blocked
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            launch(kotlinx.coroutines.Dispatchers.IO) {
                 repository.sendVerificationEmail(email, newCode)
             }
 
@@ -294,7 +294,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(updatedUser)
 
             // Trigger Verification Email asynchronously so UI is not blocked
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            launch(kotlinx.coroutines.Dispatchers.IO) {
                 repository.sendVerificationEmail(trimmed, generatedCode)
             }
 
