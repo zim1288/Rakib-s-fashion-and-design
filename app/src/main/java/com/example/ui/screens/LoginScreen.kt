@@ -54,8 +54,8 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
     val focusManager = LocalFocusManager.current
 
     // Sign In Fields
-    var loginUserOrEmail by remember { mutableStateOf("watchdogs27777@gmail.com") }
-    var loginPassword by remember { mutableStateOf("password123") }
+    var loginUserOrEmail by remember { mutableStateOf("") }
+    var loginPassword by remember { mutableStateOf("") }
     var loginPasswordVisible by remember { mutableStateOf(false) }
 
     // Sign Up Fields

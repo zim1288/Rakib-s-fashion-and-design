@@ -14,8 +14,8 @@ if (!process.env.MONGODB_URI) {
 }
 
 // Connect to MongoDB using modern driver framework
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'Silk and fashion' })
-  .then(() => console.log('Successfully connected to Silk and fashion MongoDB!'))
+mongoose.connect(process.env.MONGODB_URI, { dbName: 'Silk_and_fashion' })
+  .then(() => console.log('Successfully connected to Silk_and_fashion MongoDB!'))
   .catch(err => {
       console.error('Could not connect to MongoDB:', err);
       process.exit(1);
