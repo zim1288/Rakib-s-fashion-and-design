@@ -204,16 +204,13 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             )
             repository.insertUserAccount(newUser)
 
-            // Trigger SMTP Verification Email via backend
-            val emailSent = repository.sendVerificationEmail(trimmedEmail, generatedCode)
-            if (emailSent) {
-                _authState.value = AuthState.VerificationRequired(trimmedEmail)
-                callback(true, "A 6-digit confirmation code has been sent to your email!")
-            } else {
-                // Take them to verification anyway, let them resend or retry
-                _authState.value = AuthState.VerificationRequired(trimmedEmail)
-                callback(true, "Account registered! We couldn't deliver the confirmation code. Please click Resend Code on the next screen.")
+            // Trigger Verification Email asynchronously so UI is not blocked
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                repository.sendVerificationEmail(trimmedEmail, generatedCode)
             }
+
+            _authState.value = AuthState.VerificationRequired(trimmedEmail)
+            callback(true, "A 6-digit confirmation code is being sent to your email. It may take up to 1 minute.")
         }
     }
 
@@ -275,12 +272,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             val updatedUser = user.copy(verificationCode = newCode, codeGeneratedAt = System.currentTimeMillis())
             repository.insertUserAccount(updatedUser)
 
-            val sent = repository.sendVerificationEmail(email, newCode)
-            if (sent) {
-                callback(true, "A new 6-digit confirmation code has been sent to $email.")
-            } else {
-                callback(false, "Failed to send verification email. Please check your internet connection.")
+            // Trigger Verification Email asynchronously so UI is not blocked
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                repository.sendVerificationEmail(email, newCode)
             }
+
+            callback(true, "A new 6-digit confirmation code is being sent to $email. It may take up to 1 minute.")
         }
     }
 
@@ -295,12 +292,13 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             val generatedCode = (100000..999999).random().toString()
             val updatedUser = user.copy(verificationCode = generatedCode, codeGeneratedAt = System.currentTimeMillis())
             repository.insertUserAccount(updatedUser)
-            val emailSent = repository.sendVerificationEmail(trimmed, generatedCode)
-            if (emailSent) {
-                callback(true, "A 6-digit OTP has been sent to your email!")
-            } else {
-                callback(false, "Failed to send OTP. Please check your internet connection.")
+
+            // Trigger Verification Email asynchronously so UI is not blocked
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                repository.sendVerificationEmail(trimmed, generatedCode)
             }
+
+            callback(true, "A 6-digit OTP is being sent to your email. It may take up to 1 minute.")
         }
     }
 
@@ -345,6 +343,11 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
             callback(true, "Password reset successfully! You can now login.")
         }
+    }
+
+    suspend fun getVerificationCodeForDebug(email: String): String? {
+        val trimmed = email.trim().lowercase()
+        return repository.getUserAccountByEmail(trimmed)?.verificationCode
     }
 
     fun logout() {

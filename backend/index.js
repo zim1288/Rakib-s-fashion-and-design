@@ -187,18 +187,6 @@ app.post('/v1/auth/register', async (req, res) => {
 });
 
 // --- Email Verification Router ---
-const nodemailer = require('nodemailer');
-
-const mailUser = process.env.MAIL_USERNAME || 'ecobits1288@gmail.com';
-const mailPass = process.env.MAIL_PASSWORD || 'lvqwjniwjbgvxahn';
-
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: mailUser,
-        pass: mailPass
-    }
-});
 
 app.post('/v1/auth/send-verification', async (req, res) => {
     const { email, code } = req.body;
@@ -206,30 +194,38 @@ app.post('/v1/auth/send-verification', async (req, res) => {
         return res.status(400).json({ error: 'Email and code are required' });
     }
 
-    const mailOptions = {
-        from: `"Rakib Silk & Fashion" <${mailUser}>`,
-        to: email,
-        subject: 'Your Confirmation Code',
-        text: `Hello!\n\nHere is the one-time code to confirm your personal email address:\n\n${code}\n\nIf you didn't request the code, you can ignore this email.\n\nKind regards,\nRakib Silk & Fashion Team`,
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px;">
-                <p>Hello!</p>
-                <p>Here is the one-time code to confirm your personal email address:</p>
-                <h1 style="font-size: 36px; font-weight: bold; color: #800020; letter-spacing: 2px; margin: 20px 0;">${code}</h1>
-                <p>If you didn't request the code, you can ignore this email.</p>
-                <br/>
-                <p>Kind regards,</p>
-                <p><strong>The Rakib Silk & Fashion team</strong></p>
-            </div>
-        `
-    };
-
     try {
-        await transporter.sendMail(mailOptions);
-        console.log(`Verification email sent to ${email} successfully!`);
-        res.status(200).json({ status: 'ok' });
+        const emailJsData = {
+            service_id: 'service_gifq25t',
+            template_id: 'template_fxkonbp',
+            user_id: 'S-Rf-rtEkTugqgxM4',
+            template_params: {
+                to_email: email,
+                email: email,
+                code: code,
+                otp: code,
+                message: code
+            }
+        };
+
+        const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(emailJsData)
+        });
+
+        if (response.ok) {
+            console.log(`Verification email sent to ${email} successfully via EmailJS!`);
+            res.status(200).json({ status: 'ok' });
+        } else {
+            const errorText = await response.text();
+            console.error('EmailJS Error:', errorText);
+            res.status(500).json({ error: 'Failed to send verification email via EmailJS: ' + errorText });
+        }
     } catch (err) {
-        console.error('Error sending verification email:', err);
+        console.error('Error sending verification email via EmailJS:', err);
         res.status(500).json({ error: 'Failed to send verification email: ' + err.message });
     }
 });
