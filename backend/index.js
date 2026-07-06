@@ -201,12 +201,16 @@ app.post('/v1/auth/send-verification', async (req, res) => {
             user_id: 'S-Rf-rtEkTugqgxM4',
             template_params: {
                 to_email: email,
-                email: email,
-                code: code,
-                otp: code,
-                message: code
+                purpose: 'Silk & Fashion account verification',
+                passcode: code,
+                time: new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }
         };
+
+        // Add Private Key if it's available in the environment
+        if (process.env.EMAILJS_PRIVATE_KEY) {
+            emailJsData.accessToken = process.env.EMAILJS_PRIVATE_KEY;
+        }
 
         const response = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
