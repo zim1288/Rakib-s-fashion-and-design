@@ -201,6 +201,7 @@ app.post('/v1/auth/send-verification', async (req, res) => {
             user_id: 'S-Rf-rtEkTugqgxM4',
             template_params: {
                 to_email: email,
+                email: email,
                 purpose: 'Silk & Fashion account verification',
                 passcode: code,
                 time: new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
