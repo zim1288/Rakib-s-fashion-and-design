@@ -213,13 +213,27 @@ class TallyRepository(private val tallyDao: TallyDao) {
         }
     }
 
-    suspend fun sendVerificationEmail(email: String, code: String): Boolean {
+    suspend fun sendVerificationEmail(email: String, code: String): Result<Unit> {
         return try {
             val response = SareeApi.service.sendVerificationEmail(com.example.api.NetworkEmailRequest(email, code))
-            response.isSuccessful
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Unknown API error"
+                var errorMsg = "Failed to send email (Code: ${response.code()})"
+                try {
+                    val jsonObj = org.json.JSONObject(errorBody)
+                    if (jsonObj.has("error")) {
+                        errorMsg = jsonObj.getString("error")
+                    }
+                } catch (e: Exception) {
+                    errorMsg = errorBody
+                }
+                Result.failure(Exception(errorMsg))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to send verification email via API", e)
-            false
+            Result.failure(Exception("Network error: ${e.message}"))
         }
     }
 }

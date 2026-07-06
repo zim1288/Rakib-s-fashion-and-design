@@ -69,6 +69,15 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Low stock threshold
+    private val _lowStockThreshold = MutableStateFlow(10)
+    val lowStockThreshold = _lowStockThreshold.asStateFlow()
+
+    fun setLowStockThreshold(threshold: Int) {
+        _lowStockThreshold.value = threshold
+        prefs.edit { putInt("low_stock_threshold", threshold) }
+    }
+
     // Sync state exposed from Repository
     val syncState = repository.syncState
 
@@ -99,6 +108,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
         if (prefs.contains("is_dark_mode")) {
             _isDarkMode.value = prefs.getBoolean("is_dark_mode", false)
+        }
+
+        if (prefs.contains("low_stock_threshold")) {
+            _lowStockThreshold.value = prefs.getInt("low_stock_threshold", 10)
         }
 
         viewModelScope.launch {
@@ -141,7 +154,45 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     _authState.value = AuthState.Error("Incorrect password. Please try again.")
                 }
             } else {
-                _authState.value = AuthState.Error("Account not found. Please Sign Up to register.")
+                // If not found locally, check the remote server
+                val isEmail = android.util.Patterns.EMAIL_ADDRESS.matcher(credential).matches()
+                if (isEmail) {
+                    try {
+                        val response = SareeApi.service.loginUserOnServer(
+                            com.example.api.NetworkUserAuthRequest(credential, hashPassword(passwordEntered))
+                        )
+                        if (response.isSuccessful) {
+                            // User found on server and password matched
+                            // Create local record to restore state
+                            val restoredUser = UserAccount(
+                                email = credential,
+                                username = credential.substringBefore("@"),
+                                password = hashPassword(passwordEntered),
+                                securityQuestion = "",
+                                securityAnswer = "",
+                                isVerified = true, // We assume they are verified if they could log in on server
+                                verificationCode = null,
+                                codeGeneratedAt = 0L
+                            )
+                            repository.insertUserAccount(restoredUser)
+
+                            _currentUserEmail.value = restoredUser.email
+                            SareeApi.userEmailHeader = restoredUser.email
+                            _authState.value = AuthState.Authorized
+                            prefs.edit { putString("logged_in_email", restoredUser.email) }
+                        } else {
+                            if (response.code() == 401) {
+                                _authState.value = AuthState.Error("Incorrect password. Please try again.")
+                            } else {
+                                _authState.value = AuthState.Error("Account not found. Please Sign Up to register.")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        _authState.value = AuthState.Error("Account not found locally, and failed to reach server. Error: ${e.message}")
+                    }
+                } else {
+                    _authState.value = AuthState.Error("Account not found. Please Sign Up to register.")
+                }
             }
         }
     }
@@ -204,13 +255,18 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             )
             repository.insertUserAccount(newUser)
 
-            // Trigger Verification Email asynchronously so UI is not blocked
-            launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Trigger Verification Email and wait for result
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 repository.sendVerificationEmail(trimmedEmail, generatedCode)
             }
 
-            _authState.value = AuthState.VerificationRequired(trimmedEmail)
-            callback(true, "A 6-digit confirmation code is being sent to your email. It may take up to 1 minute.")
+            if (result.isSuccess) {
+                _authState.value = AuthState.VerificationRequired(trimmedEmail)
+                callback(true, "A 6-digit confirmation code is being sent to your email. It may take up to 1 minute.")
+            } else {
+                val errorMsg = result.exceptionOrNull()?.message ?: "Failed to send email."
+                callback(false, errorMsg)
+            }
         }
     }
 
@@ -272,33 +328,70 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             val updatedUser = user.copy(verificationCode = newCode, codeGeneratedAt = System.currentTimeMillis())
             repository.insertUserAccount(updatedUser)
 
-            // Trigger Verification Email asynchronously so UI is not blocked
-            launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Trigger Verification Email and wait for result
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 repository.sendVerificationEmail(email, newCode)
             }
 
-            callback(true, "A new 6-digit confirmation code is being sent to $email. It may take up to 1 minute.")
+            if (result.isSuccess) {
+                callback(true, "A new 6-digit confirmation code is being sent to $email. It may take up to 1 minute.")
+            } else {
+                val errorMsg = result.exceptionOrNull()?.message ?: "Failed to send email."
+                callback(false, errorMsg)
+            }
         }
     }
 
     fun sendRecoveryOtp(email: String, callback: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             val trimmed = email.trim().lowercase()
-            val user = repository.getUserAccountByEmail(trimmed)
+            var user = repository.getUserAccountByEmail(trimmed)
+
             if (user == null) {
-                callback(false, "Email address not found!")
-                return@launch
+                // Check if the user exists on the remote backend
+                try {
+                    val response = SareeApi.service.checkUserOnServer(
+                        com.example.api.NetworkEmailRequest(trimmed, "")
+                    )
+                    if (response.isSuccessful) {
+                        // User exists on server, create a dummy local user so recovery can proceed
+                        val dummyUser = UserAccount(
+                            email = trimmed,
+                            username = trimmed.substringBefore("@"),
+                            password = "RECOVERING_PASSWORD", // Will be overwritten on reset
+                            securityQuestion = "",
+                            securityAnswer = "",
+                            isVerified = true,
+                            verificationCode = null,
+                            codeGeneratedAt = 0L
+                        )
+                        repository.insertUserAccount(dummyUser)
+                        user = dummyUser
+                    } else {
+                        callback(false, "Email address not found!")
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    callback(false, "Email address not found locally, and failed to reach server. Error: ${e.message}")
+                    return@launch
+                }
             }
+
             val generatedCode = (100000..999999).random().toString()
             val updatedUser = user.copy(verificationCode = generatedCode, codeGeneratedAt = System.currentTimeMillis())
             repository.insertUserAccount(updatedUser)
 
-            // Trigger Verification Email asynchronously so UI is not blocked
-            launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Trigger Verification Email and wait for result
+            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 repository.sendVerificationEmail(trimmed, generatedCode)
             }
 
-            callback(true, "A 6-digit OTP is being sent to your email. It may take up to 1 minute.")
+            if (result.isSuccess) {
+                callback(true, "A 6-digit OTP is being sent to your email. It may take up to 1 minute.")
+            } else {
+                val errorMsg = result.exceptionOrNull()?.message ?: "Failed to send email."
+                callback(false, errorMsg)
+            }
         }
     }
 
@@ -529,11 +622,11 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun updateStockItemDetails(id: Int, name: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
+    fun updateStockItemDetails(id: Int, name: String, sku: String, color: String, fabricType: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
         viewModelScope.launch {
             val existing = sareeItems.value.firstOrNull { it.id == id }
             val finalImageUrl = if (imageUrl.isNullOrBlank()) existing?.imageUrl else imageUrl
-            val updated = SareeItem(
+            val updated = SareeItem( sku = sku, color = color, fabricType = fabricType,
                 id = id,
                 modelName = name,
                 brandCategory = category,
@@ -552,6 +645,21 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Setters for transaction filters
+    fun addStockItemDirectly(name: String, sku: String, color: String, fabricType: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
+        viewModelScope.launch {
+            val item = SareeItem(
+                modelName = name,
+                sku = sku,
+                color = color,
+                fabricType = fabricType,
+                brandCategory = category,
+                unitPrice = price,
+                pieceCount = count,
+                imageUrl = imageUrl
+            )
+            repository.insertSareeItem(item)
+        }
+    }
     fun setMonthFilter(month: String) {
         _selectedMonthFilter.value = month
     }

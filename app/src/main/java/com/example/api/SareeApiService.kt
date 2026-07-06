@@ -15,6 +15,9 @@ import java.util.concurrent.TimeUnit
 data class NetworkSareeItem(
     val id: Int?,
     val modelName: String,
+    val sku: String = "",
+    val color: String = "",
+    val fabricType: String = "",
     val brandCategory: String,
     val unitPrice: Double,
     val pieceCount: Int,
@@ -26,6 +29,9 @@ data class NetworkSareeItem(
 data class NetworkProductionItem(
     val id: Int?,
     val modelName: String,
+    val sku: String = "",
+    val color: String = "",
+    val fabricType: String = "",
     val quantity: Int,
     val estimatedCompletionDate: String,
     val status: String,
@@ -38,6 +44,9 @@ data class NetworkTransactionLog(
     val id: Int?,
     val type: String,
     val modelName: String,
+    val sku: String = "",
+    val color: String = "",
+    val fabricType: String = "",
     val quantity: Int,
     val unitPrice: Double,
     val totalAmount: Double,
@@ -88,6 +97,12 @@ interface SareeApiService {
 
     @POST("auth/register")
     suspend fun registerUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
+
+    @POST("auth/login")
+    suspend fun loginUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
+
+    @POST("auth/check")
+    suspend fun checkUserOnServer(@Body request: NetworkEmailRequest): Response<Unit>
 }
 
 object SareeApi {
@@ -165,6 +180,16 @@ object SareeApi {
             }
             override suspend fun registerUserOnServer(request: NetworkUserAuthRequest): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Registered user ${request.email} successfully.")
+                return Response.success(Unit)
+            }
+
+            override suspend fun loginUserOnServer(request: NetworkUserAuthRequest): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Logged in user ${request.email} successfully.")
+                return Response.success(Unit)
+            }
+
+            override suspend fun checkUserOnServer(request: NetworkEmailRequest): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Checked user ${request.email} successfully.")
                 return Response.success(Unit)
             }
         }

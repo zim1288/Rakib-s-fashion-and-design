@@ -32,6 +32,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
 import com.example.ui.AuthState
@@ -66,15 +71,26 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
     var signUpConfirmPassword by remember { mutableStateOf("") }
     var signUpConfirmPasswordVisible by remember { mutableStateOf(false) }
     var signUpStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var isSignUpLoading by remember { mutableStateOf(false) }
 
     // Forgot Password Fields
     var forgotEmail by remember { mutableStateOf("") }
     var forgotStatusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
+    var isSendOtpLoading by remember { mutableStateOf(false) }
     var isRecoveryOtpSent by remember { mutableStateOf(false) }
     var isRecoveryOtpVerified by remember { mutableStateOf(false) }
     var recoveryOtpText by remember { mutableStateOf("") }
     var recoveryNewPassword by remember { mutableStateOf("") }
     var recoveryNewPasswordVisible by remember { mutableStateOf(false) }
+
+    var debugRecoveryOtp by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(forgotEmail, isRecoveryOtpSent) {
+        if (isRecoveryOtpSent) {
+            debugRecoveryOtp = viewModel.getVerificationCodeForDebug(forgotEmail)
+        } else {
+            debugRecoveryOtp = null
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -395,11 +411,13 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                     if (signUpPassword != signUpConfirmPassword) {
                                         signUpStatusMessage = Pair(false, "Passwords do not match!")
                                     } else {
+                                        isSignUpLoading = true
                                         viewModel.registerUser(
                                             email = signUpEmail,
                                             username = signUpUsername,
                                             passwordEntered = signUpPassword
                                         ) { success, msg ->
+                                            isSignUpLoading = false
                                             signUpStatusMessage = Pair(success, msg)
                                             if (success) {
                                                 // Reset fields
@@ -421,7 +439,11 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Text("SIGN UP & CREATE", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                if (isSignUpLoading) {
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                } else {
+                                    Text("SIGN UP & CREATE", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                }
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -477,7 +499,9 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                                 forgotStatusMessage = Pair(false, "Please enter your registered email.")
                                                 return@Button
                                             }
+                                            isSendOtpLoading = true
                                             viewModel.sendRecoveryOtp(forgotEmail) { isSuccess, resultText ->
+                                                isSendOtpLoading = false
                                                 forgotStatusMessage = Pair(isSuccess, resultText)
                                                 if (isSuccess) isRecoveryOtpSent = true
                                             }
@@ -492,40 +516,37 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                         ),
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
-                                        Text("SEND OTP", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                        if (isSendOtpLoading) {
+                                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                        } else {
+                                            Text("SEND OTP", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                                        }
                                     }
                                 } else {
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    androidx.compose.foundation.text.BasicTextField(
-                                        value = recoveryOtpText,
-                                        onValueChange = { if (it.length <= 6 && it.all { char -> char.isDigit() }) recoveryOtpText = it },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                        modifier = Modifier.fillMaxWidth().testTag("forgot_otp_input"),
-                                        decorationBox = {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                for (i in 0 until 6) {
-                                                    val char = if (i < recoveryOtpText.length) recoveryOtpText[i].toString() else ""
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .weight(1f)
-                                                            .padding(horizontal = 4.dp)
-                                                            .height(56.dp)
-                                                            .border(
-                                                                1.dp,
-                                                                if (char.isNotEmpty()) RoyalCrimson else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                                                RoundedCornerShape(8.dp)
-                                                            ),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text(text = char, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-                                                    }
-                                                }
-                                            }
-                                        }
+                                    OtpInputField(
+                                        otpText = recoveryOtpText,
+                                        onOtpChange = { recoveryOtpText = it },
+                                        modifier = Modifier.testTag("forgot_otp_input")
                                     )
+                                    if (debugRecoveryOtp != null) {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Card(
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                            ),
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "Testing Helper (Local DB): OTP is $debugRecoveryOtp",
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                                modifier = Modifier.padding(10.dp),
+                                                textAlign = TextAlign.Center
+                                            )
+                                        }
+                                    }
                                     Spacer(modifier = Modifier.height(14.dp))
                                     Button(
                                         onClick = {
@@ -654,6 +675,12 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
     var verificationCodeInput by remember { mutableStateOf("") }
     var statusMessage by remember { mutableStateOf<Pair<Boolean, String>?>(null) }
     var secondsRemaining by remember { mutableIntStateOf(120) }
+    var isResendLoading by remember { mutableStateOf(false) }
+
+    var debugOtp by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(email, secondsRemaining) {
+        debugOtp = viewModel.getVerificationCodeForDebug(email)
+    }
 
     LaunchedEffect(key1 = secondsRemaining) {
         if (secondsRemaining > 0) {
@@ -750,25 +777,30 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    OutlinedTextField(
-                        value = verificationCodeInput,
-                        onValueChange = {
-                            if (it.length <= 6 && it.all { char -> char.isDigit() }) {
-                                verificationCodeInput = it
-                            }
-                        },
-                        label = { Text("6-Digit Code") },
-                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Code", tint = RoyalCrimson) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("verification_code_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = RoyalCrimson,
-                            focusedLabelColor = RoyalCrimson
-                        )
+                    OtpInputField(
+                        otpText = verificationCodeInput,
+                        onOtpChange = { verificationCodeInput = it },
+                        modifier = Modifier.testTag("verification_code_input")
                     )
+
+                    if (debugOtp != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Testing Helper (Local DB): OTP is $debugOtp",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                modifier = Modifier.padding(10.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
 
                     statusMessage?.let { (isSuccess, message) ->
                         Spacer(modifier = Modifier.height(10.dp))
@@ -826,7 +858,9 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                         TextButton(
                             onClick = {
                                 focusManager.clearFocus()
+                                isResendLoading = true
                                 viewModel.resendVerificationCode(email) { success, msg ->
+                                    isResendLoading = false
                                     statusMessage = Pair(success, msg)
                                     if (success) {
                                         secondsRemaining = 120
@@ -835,11 +869,15 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                             },
                             modifier = Modifier.testTag("resend_code_btn")
                         ) {
-                            Text(
-                                "Resend Code",
-                                color = RoyalCrimson,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                            )
+                            if (isResendLoading) {
+                                CircularProgressIndicator(color = RoyalCrimson, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(
+                                    "Resend Code",
+                                    color = RoyalCrimson,
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
                         }
                     }
                 }
@@ -871,6 +909,61 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
             }
 
             Spacer(modifier = Modifier.height(40.dp))
+        }
+    }
+}
+
+@Composable
+fun OtpInputField(
+    otpText: String,
+    onOtpChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    otpLength: Int = 6
+) {
+    val focusRequesters = remember { List(otpLength) { FocusRequester() } }
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        for (i in 0 until otpLength) {
+            val char = otpText.getOrNull(i)?.toString() ?: ""
+            OutlinedTextField(
+                value = char,
+                onValueChange = { value ->
+                    val newVal = value.filter { it.isDigit() }
+                    if (newVal.isNotEmpty()) {
+                        val newOtp = otpText.padEnd(otpLength, ' ').replaceRange(i, i + 1, newVal.takeLast(1)).replace(" ", "")
+                        onOtpChange(newOtp.take(otpLength))
+                        if (i < otpLength - 1) {
+                            focusRequesters[i + 1].requestFocus()
+                        }
+                    } else {
+                        val newOtp = otpText.padEnd(otpLength, ' ').replaceRange(i, i + 1, " ").trimEnd()
+                        onOtpChange(newOtp)
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 4.dp)
+                    .aspectRatio(1f)
+                    .focusRequester(focusRequesters[i])
+                    .onKeyEvent { event ->
+                        if (event.key == Key.Backspace && char.isEmpty() && i > 0) {
+                            focusRequesters[i - 1].requestFocus()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+                textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 20.sp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = RoyalCrimson,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                )
+            )
         }
     }
 }

@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 data class SareeItem(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "model_name") val modelName: String,
+    @ColumnInfo(name = "sku") val sku: String = "",
+    @ColumnInfo(name = "color") val color: String = "",
+    @ColumnInfo(name = "fabric_type") val fabricType: String = "",
     @ColumnInfo(name = "brand_category") val brandCategory: String, // "Rakib Fashion" or "Rakib Silk"
     @ColumnInfo(name = "unit_price") val unitPrice: Double,
     @ColumnInfo(name = "piece_count") val pieceCount: Int,
@@ -19,6 +22,9 @@ data class SareeItem(
 data class ProductionItem(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "model_name") val modelName: String,
+    @ColumnInfo(name = "sku") val sku: String = "",
+    @ColumnInfo(name = "color") val color: String = "",
+    @ColumnInfo(name = "fabric_type") val fabricType: String = "",
     @ColumnInfo(name = "quantity") val quantity: Int,
     @ColumnInfo(name = "estimated_completion_date") val estimatedCompletionDate: String,
     @ColumnInfo(name = "status") val status: String, // "In Progress" or "Completed"
@@ -30,6 +36,9 @@ data class TransactionLog(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     @ColumnInfo(name = "type") val type: String, // "EXPENSE" (Purchase) or "SALE"
     @ColumnInfo(name = "model_name") val modelName: String,
+    @ColumnInfo(name = "sku") val sku: String = "",
+    @ColumnInfo(name = "color") val color: String = "",
+    @ColumnInfo(name = "fabric_type") val fabricType: String = "",
     @ColumnInfo(name = "quantity") val quantity: Int,
     @ColumnInfo(name = "unit_price") val unitPrice: Double,
     @ColumnInfo(name = "total_amount") val totalAmount: Double,
@@ -100,7 +109,7 @@ interface TallyDao {
     suspend fun insertUserAccount(user: UserAccount): Long
 }
 
-@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 5, exportSchema = false)
+@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 6, exportSchema = false)
 abstract class TallyDatabase : RoomDatabase() {
     abstract fun tallyDao(): TallyDao
 }

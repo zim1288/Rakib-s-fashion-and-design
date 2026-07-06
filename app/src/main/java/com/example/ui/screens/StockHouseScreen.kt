@@ -42,190 +42,266 @@ import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
 
+import androidx.compose.ui.platform.LocalContext
+import android.graphics.Bitmap
+import android.net.Uri
+import java.io.File
+import java.io.FileOutputStream
+
 @OptIn(ExperimentalAnimationApi::class)
 // ---------------- 1. STOCK IN HOUSE (Brand Switch) ----------------
 @Composable
 fun StockHouseScreen(viewModel: TallyViewModel) {
     val sarees by viewModel.sareeItems.collectAsStateWithLifecycle()
+    val lowStockThreshold by viewModel.lowStockThreshold.collectAsStateWithLifecycle()
     var selectedBrand by remember { mutableStateOf("Rakib Silk") } // Rakib Silk / Rakib Fashion
 
     val valuation = sarees.filter { it.brandCategory == selectedBrand }.sumOf { it.totalValue }
 
     var itemToEdit by remember { mutableStateOf<SareeItem?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-    ) {
-        // Instant Live Valuation banner
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = SlateDark),
-            border = BorderStroke(1.dp, GoldAccent)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+    var isAddingItem by remember { mutableStateOf(false) }
+
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { isAddingItem = true },
+                containerColor = RoyalCrimson,
+                contentColor = Color.White
             ) {
-                Text("$selectedBrand Total Valuation", style = MaterialTheme.typography.bodyMedium, color = GoldAccent)
-                Text(
-                    text = "৳ ${formatCurrency(valuation)}",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Icon(Icons.Default.Add, contentDescription = "Add Item")
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Brand division controller
-        Row(
+    ) { paddingValues ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surface),
-            horizontalArrangement = Arrangement.SpaceEvenly
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
         ) {
-            listOf("Rakib Silk", "Rakib Fashion").forEach { brand ->
-                val isSelected = selectedBrand == brand
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { selectedBrand = brand }
-                        .background(if (isSelected) RoyalCrimson else Color.Transparent)
-                        .padding(vertical = 12.dp)
-                        .testTag("brand_tab_${brand.replace(" ", "_")}"),
-                    contentAlignment = Alignment.Center
+            // Instant Live Valuation banner
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = SlateDark),
+                border = BorderStroke(1.dp, GoldAccent)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Text("$selectedBrand Total Valuation", style = MaterialTheme.typography.bodyMedium, color = GoldAccent)
                     Text(
-                        text = brand.uppercase(),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        text = "৳ ${formatCurrency(valuation)}",
+                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        val filteredList = sarees.filter { it.brandCategory == selectedBrand }
-
-        if (filteredList.isEmpty()) {
-            Box(
+            // Brand division controller
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surface),
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Info, contentDescription = "Empty", tint = RoyalCrimson.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("No stock items found under $selectedBrand", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                listOf("Rakib Silk", "Rakib Fashion").forEach { brand ->
+                    val isSelected = selectedBrand == brand
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { selectedBrand = brand }
+                            .background(if (isSelected) RoyalCrimson else Color.Transparent)
+                            .padding(vertical = 12.dp)
+                            .testTag("brand_tab_${brand.replace(" ", "_")}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = brand.uppercase(),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        )
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .testTag("stock_list"),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                itemsIndexed(filteredList) { index, item ->
-                    val isLowStock = item.pieceCount < 10
-                    val cardBackgroundColor = if (isLowStock) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
-                    val cardBorderColor = if (isLowStock) MaterialTheme.colorScheme.error.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                    val stockTextColor = if (isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
 
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("stock_item_$index"),
-                        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
-                        border = BorderStroke(if (isLowStock) 1.dp else 0.5.dp, cardBorderColor)
-                    ) {
-                        Row(
+            Spacer(modifier = Modifier.height(12.dp))
+
+            var searchQuery by remember { mutableStateOf("") }
+            var fabricFilter by remember { mutableStateOf("All Fabrics") }
+            var colorFilter by remember { mutableStateOf("All Colors") }
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search items by name or SKU...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = fabricFilter,
+                    onValueChange = { fabricFilter = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Fabric") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = colorFilter,
+                    onValueChange = { colorFilter = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Color") },
+                    singleLine = true
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val filteredList = sarees.filter { it.brandCategory == selectedBrand }.filter {
+                (searchQuery.isBlank() || it.modelName.contains(searchQuery, ignoreCase = true) || it.sku.contains(searchQuery, ignoreCase = true)) &&
+                        (fabricFilter == "All Fabrics" || fabricFilter.isBlank() || it.fabricType.contains(fabricFilter, ignoreCase = true)) &&
+                        (colorFilter == "All Colors" || colorFilter.isBlank() || it.color.contains(colorFilter, ignoreCase = true))
+            }
+
+            if (filteredList.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Info, contentDescription = "Empty", tint = RoyalCrimson.copy(alpha = 0.3f), modifier = Modifier.size(64.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("No stock items found", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .testTag("stock_list"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(filteredList) { index, item ->
+                        val isLowStock = item.pieceCount < lowStockThreshold
+                        val cardBackgroundColor = if (isLowStock) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                        val cardBorderColor = if (isLowStock) MaterialTheme.colorScheme.error.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                        val stockTextColor = if (isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .testTag("stock_item_$index"),
+                            colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+                            border = BorderStroke(if (isLowStock) 1.dp else 0.5.dp, cardBorderColor)
                         ) {
-                            if (!item.imageUrl.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = item.imageUrl,
-                                    contentDescription = "Saree Image",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color.LightGray.copy(alpha = 0.3f))
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.modelName,
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                if (!item.imageUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = item.imageUrl,
+                                        contentDescription = "Saree Image",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(60.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.LightGray.copy(alpha = 0.3f))
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = item.modelName,
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (isLowStock) {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Badge(containerColor = MaterialTheme.colorScheme.error) {
+                                                Text("Low Stock", color = MaterialTheme.colorScheme.onError, modifier = Modifier.padding(horizontal = 4.dp))
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Unit: ৳${formatCurrency(item.unitPrice)}",
+                                        text = "SKU: ${item.sku.ifBlank { "N/A" }} | ${item.color} | ${item.fabricType}",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Unit: ৳${formatCurrency(item.unitPrice)}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${item.pieceCount} pcs",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = stockTextColor,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                // Interactive Total Value label and actions
+                                Column(horizontalAlignment = Alignment.End) {
                                     Text(
-                                        text = "${item.pieceCount} pcs",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = stockTextColor,
-                                        fontWeight = FontWeight.SemiBold,
+                                        text = "৳ ${formatCurrency(item.totalValue)}",
+                                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = RoyalCrimson,
+                                        textAlign = TextAlign.End,
                                         maxLines = 1
                                     )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            // Interactive Total Value label and actions
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = "৳ ${formatCurrency(item.totalValue)}",
-                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = RoyalCrimson,
-                                    textAlign = TextAlign.End,
-                                    maxLines = 1
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Row {
-                                    IconButton(
-                                        onClick = { itemToEdit = item },
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .testTag("edit_item_${item.id}")
-                                    ) {
-                                        Icon(Icons.Default.Edit, contentDescription = "Edit", tint = GoldAccent, modifier = Modifier.size(18.dp))
-                                    }
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    IconButton(
-                                        onClick = { viewModel.deleteStockItem(item) },
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .testTag("delete_item_${item.id}")
-                                    ) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CardinalRed, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row {
+                                        IconButton(
+                                            onClick = { itemToEdit = item },
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .testTag("edit_item_${item.id}")
+                                        ) {
+                                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = GoldAccent, modifier = Modifier.size(18.dp))
+                                        }
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        IconButton(
+                                            onClick = { viewModel.deleteStockItem(item) },
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .testTag("delete_item_${item.id}")
+                                        ) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = CardinalRed, modifier = Modifier.size(18.dp))
+                                        }
                                     }
                                 }
                             }
@@ -241,9 +317,19 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
         EditItemDialog(
             item = item,
             onDismiss = { itemToEdit = null }
-        ) { name, category, price, count, imageUrl ->
-            viewModel.updateStockItemDetails(item.id, name, category, price, count, imageUrl)
+        ) { name, sku, color, fabricType, category, price, count, imageUrl ->
+            viewModel.updateStockItemDetails(item.id, name, sku, color, fabricType, category, price, count, imageUrl)
             itemToEdit = null
+        }
+    }
+
+    if (isAddingItem) {
+        EditItemDialog(
+            item = SareeItem(modelName = "", sku = "", color = "", fabricType = "", brandCategory = selectedBrand, unitPrice = 0.0, pieceCount = 0),
+            onDismiss = { isAddingItem = false }
+        ) { name, sku, color, fabricType, category, price, count, imageUrl ->
+            viewModel.addStockItemDirectly(name, sku, color, fabricType, category, price, count, imageUrl)
+            isAddingItem = false
         }
     }
 }
@@ -252,16 +338,35 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
 fun EditItemDialog(
     item: SareeItem,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Double, Int, String?) -> Unit
+    onConfirm: (String, String, String, String, String, Double, Int, String?) -> Unit
 ) {
     var name by remember { mutableStateOf(item.modelName) }
+    var sku by remember { mutableStateOf(item.sku) }
+    var color by remember { mutableStateOf(item.color) }
+    var fabricType by remember { mutableStateOf(item.fabricType) }
     var priceStr by remember { mutableStateOf(item.unitPrice.toString()) }
     var countStr by remember { mutableStateOf(item.pieceCount.toString()) }
     var brandCategory by remember { mutableStateOf(item.brandCategory) }
     var imageUrl by remember { mutableStateOf(item.imageUrl) }
+    val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         uri?.let { imageUrl = it.toString() }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        bitmap?.let {
+            try {
+                val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
+                val outputStream = FileOutputStream(file)
+                it.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                outputStream.flush()
+                outputStream.close()
+                imageUrl = Uri.fromFile(file).toString()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -287,6 +392,33 @@ fun EditItemDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = sku,
+                    onValueChange = { sku = it },
+                    label = { Text("SKU") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = color,
+                        onValueChange = { color = it },
+                        label = { Text("Color") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = fabricType,
+                        onValueChange = { fabricType = it },
+                        label = { Text("Fabric Type") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Select Brand
@@ -342,19 +474,25 @@ fun EditItemDialog(
                             contentDescription = "Selected Image",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(50.dp)
+                                .size(60.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color.LightGray.copy(alpha = 0.3f))
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                     }
-                    OutlinedButton(
-                        onClick = { launcher.launch("image/*") },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.AddCircle, contentDescription = "Pick Image", modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (imageUrl.isNullOrBlank()) "Add Picture" else "Change Picture")
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedButton(
+                            onClick = { launcher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Gallery")
+                        }
+                        OutlinedButton(
+                            onClick = { cameraLauncher.launch(null) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Camera")
+                        }
                     }
                 }
 
@@ -372,7 +510,7 @@ fun EditItemDialog(
                         onClick = {
                             val p = priceStr.toDoubleOrNull() ?: item.unitPrice
                             val count = countStr.toIntOrNull() ?: item.pieceCount
-                            onConfirm(name, brandCategory, p, count, imageUrl)
+                            onConfirm(name, sku, color, fabricType, brandCategory, p, count, imageUrl)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = RoyalCrimson)
                     ) {

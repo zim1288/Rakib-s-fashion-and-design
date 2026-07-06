@@ -186,12 +186,45 @@ app.post('/v1/auth/register', async (req, res) => {
     }
 });
 
+app.post('/v1/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        if (user.password !== password) return res.status(401).json({ error: 'Invalid password' });
+
+        res.status(200).json({ status: 'ok', email: user.email });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/v1/auth/check', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ error: 'Email required' });
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.status(200).json({ status: 'ok' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Email Verification Router ---
 
 app.post('/v1/auth/send-verification', async (req, res) => {
     const { email, code } = req.body;
     if (!email || !code) {
         return res.status(400).json({ error: 'Email and code are required' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
     }
 
     try {

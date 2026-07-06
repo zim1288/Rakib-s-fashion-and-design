@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -17,25 +16,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
 import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
-import java.text.NumberFormat
-import java.util.Locale
 
 @OptIn(ExperimentalAnimationApi::class)
 // ---------------- 4. SELL PRODUCT (Deduct Ledger) ----------------
@@ -46,7 +37,6 @@ fun SellScreen(viewModel: TallyViewModel) {
     var selectedItemIndex by remember { mutableIntStateOf(-1) }
     var qtyToSellStr by remember { mutableStateOf("") }
     var retailPriceStr by remember { mutableStateOf("") }
-
     var feedbackMsg by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
 
@@ -75,15 +65,15 @@ fun SellScreen(viewModel: TallyViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Retail Saree Entry Selection:", style = MaterialTheme.typography.labelSmall)
-                    
+
                     // Simple Dropdown simulation
                     var expanded by remember { mutableStateOf(value = false) }
+                    var searchDropdownQuery by remember { mutableStateOf("") }
                     val currentSelectionName = if (selectedItemIndex in sarees.indices) {
                         "${sarees[selectedItemIndex].modelName} (${sarees[selectedItemIndex].brandCategory}) - Available: ${sarees[selectedItemIndex].pieceCount} pcs"
                     } else {
                         "SELECT A SAREE MODEL FROM HOUSE STOCK"
                     }
-
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -117,45 +107,64 @@ fun SellScreen(viewModel: TallyViewModel) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 200.dp)
+                                .heightIn(max = 300.dp)
                                 .clip(RoundedCornerShape(8.dp)),
                             border = BorderStroke(0.5.dp, Color.LightGray)
                         ) {
-                            LazyColumn {
-                                itemsIndexed(sarees) { idx, item ->
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                selectedItemIndex = idx
-                                                retailPriceStr = item.unitPrice.toString() // Prepopulate
-                                                expanded = false
-                                            }
-                                            .padding(12.dp)
-                                            .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = item.modelName,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Row {
+                            Column {
+                                OutlinedTextField(
+                                    value = searchDropdownQuery,
+                                    onValueChange = { searchDropdownQuery = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    placeholder = { Text("Search by name or SKU...") },
+                                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                                    singleLine = true
+                                )
+                                val filteredSarees = sarees.filter {
+                                    searchDropdownQuery.isBlank() ||
+                                            it.modelName.contains(searchDropdownQuery, ignoreCase = true) ||
+                                            it.sku.contains(searchDropdownQuery, ignoreCase = true)
+                                }
+                                LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                                    items(filteredSarees.size) { i ->
+                                        val item = filteredSarees[i]
+                                        val idx = sarees.indexOf(item)
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedItemIndex = idx
+                                                    retailPriceStr = item.unitPrice.toString() // Prepopulate
+                                                    expanded = false
+                                                }
+                                                .padding(12.dp)
+                                                .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
+                                        ) {
+                                            Column {
                                                 Text(
-                                                    text = item.brandCategory,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontSize = 11.sp,
+                                                    text = item.modelName,
                                                     fontWeight = FontWeight.Bold,
-                                                    maxLines = 1
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
-                                                    fontSize = 11.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
+                                                Row {
+                                                    Text(
+                                                        text = item.brandCategory,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 1
+                                                    )
+                                                    Spacer(modifier = Modifier.width(12.dp))
+                                                    Text(
+                                                        text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
+                                                        fontSize = 11.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -250,4 +259,3 @@ fun SellScreen(viewModel: TallyViewModel) {
         }
     }
 }
-
