@@ -95,7 +95,10 @@ fun TopBanner(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     if (showBackButton) {
                         IconButton(
                             onClick = onBackToDashboard,
@@ -105,7 +108,7 @@ fun TopBanner(
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Rakib Silk & Fashion",
                             style = MaterialTheme.typography.titleLarge.copy(
@@ -145,7 +148,9 @@ fun TopBanner(
                                     is SyncState.ERROR -> "Local Save (Unsynced)"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                color = SoftEggshell.copy(alpha = 0.8f)
+                                color = SoftEggshell.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -172,7 +177,7 @@ fun TopBanner(
                         onClick = onSettings,
                         modifier = Modifier.testTag("settings_button")
                     ) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings", tint = GoldAccent)
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = GoldAccent)
                     }
                 }
             }

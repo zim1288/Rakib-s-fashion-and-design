@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.TallyViewModel
+
 import androidx.compose.animation.*
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,12 +17,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -35,7 +39,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
-import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -53,13 +56,15 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { imageUrlInput = it.toString() }
+        if (uri != null) {
+            imageUrlInput = uri.toString()
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         Text("Stage Incoming Cargo Shipments", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = RoyalCrimson)
         Text("Build bulk purchase cart, then lock stock on commitment", style = MaterialTheme.typography.bodySmall)
@@ -96,11 +101,11 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                                     modifier = Modifier
                                         .weight(1f)
                                         .clickable { categoryInput = brand }
-                                        .background(if (active) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                        .background(if (active) RoyalCrimson else Color.Transparent)
                                         .padding(vertical = 8.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text(brand.substringAfter(" "), fontSize = 11.sp, color = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                                    Text(brand.substringAfter(" "), fontSize = 11.sp, color = if (active) Color.White else SlateDark, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -112,13 +117,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                         label = { Text("Unit Cost") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        modifier = Modifier.weight(0.9f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
+                        modifier = Modifier.weight(0.9f)
                     )
 
                     OutlinedTextField(
@@ -127,13 +126,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                         label = { Text("Pieces") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        modifier = Modifier.weight(0.7f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
+                        modifier = Modifier.weight(0.7f)
                     )
                 }
 
@@ -171,7 +164,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                     onClick = {
                         val cost = costInput.toDoubleOrNull() ?: 0.0
                         val qty = qtyInput.toIntOrNull() ?: 0
-                        if (sareeInput.isNotBlank() && (cost > 0) && (qty > 0)) {
+                        if (sareeInput.isNotBlank() && cost > 0 && qty > 0) {
                             viewModel.addToCart(sareeInput, categoryInput, cost, qty, imageUrlInput)
                             // Clear inputs
                             sareeInput = ""
@@ -259,39 +252,22 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                                         )
                                         Spacer(modifier = Modifier.width(12.dp))
                                     }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = item.modelName,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Column {
+                                        Text(item.modelName, fontWeight = FontWeight.Bold)
+                                        Row {
                                             Text(
                                                 text = item.brandCategory,
                                                 color = if (item.brandCategory == "Rakib Silk") GoldAccent else RoyalCrimson,
-                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                                maxLines = 1
+                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold)
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "৳${formatCurrency(item.unitCost)} x ${item.quantity}",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Cost: ৳${formatCurrency(item.unitCost)} x ${item.quantity} pieces", style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "৳${formatCurrency(item.unitCost * item.quantity)}",
-                                        fontWeight = FontWeight.Bold,
-                                        color = RoyalCrimson,
-                                        modifier = Modifier.padding(end = 4.dp),
-                                        maxLines = 1
-                                    )
+                                    Text("৳${formatCurrency(item.unitCost * item.quantity)}", fontWeight = FontWeight.Bold, color = RoyalCrimson, modifier = Modifier.padding(end = 8.dp))
                                     IconButton(onClick = { viewModel.removeFromCart(idx) }, modifier = Modifier.size(32.dp)) {
                                         Icon(Icons.Default.Clear, contentDescription = "Remove", tint = CardinalRed)
                                     }
@@ -314,11 +290,9 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = GoldAccent)
                 ) {
                     Text(
-                        text = "COMMIT ৳${formatCurrency(cartTotal)} TO HOUSE STOCK",
+                        "COMMIT ৳${formatCurrency(cartTotal)} TO HOUSE STOCK",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = SlateDark,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = SlateDark
                     )
                 }
             }

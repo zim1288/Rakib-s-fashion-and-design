@@ -16,7 +16,7 @@ class TallyApplication : Application() {
         database = Room.databaseBuilder(
             applicationContext,
             TallyDatabase::class.java,
-            "tally_khata_database"
+            "tally_khata_database",
         )
         .fallbackToDestructiveMigration(dropAllTables = true)
         .build()

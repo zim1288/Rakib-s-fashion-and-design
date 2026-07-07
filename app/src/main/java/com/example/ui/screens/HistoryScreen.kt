@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import com.example.ui.TallyViewModel
+
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -8,6 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
@@ -31,7 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
-import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
@@ -69,7 +72,7 @@ fun HistoryScreen(viewModel: TallyViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         Text("Central Ledger & Analytics", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
@@ -77,7 +80,7 @@ fun HistoryScreen(viewModel: TallyViewModel) {
         // Timeframe Dropdown Selectors
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("Select Month Filter", style = MaterialTheme.typography.labelSmall)
@@ -131,12 +134,12 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text("TOTAL SPENT (PURCHASES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
-                        Text("৳ ${formatCurrency(totalSpent)}", style = MaterialTheme.typography.titleMedium, color = CardinalRed, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("TOTAL SPENT (PURCHASES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f))
+                        Text("৳ ${formatCurrency(totalSpent)}", style = MaterialTheme.typography.titleMedium, color = CardinalRed, fontWeight = FontWeight.Bold)
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        Text("TOTAL EARNED (SALES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
-                        Text("৳ ${formatCurrency(totalEarned)}", style = MaterialTheme.typography.titleMedium, color = Color.Green, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("TOTAL EARNED (SALES)", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = SoftEggshell.copy(alpha = 0.6f))
+                        Text("৳ ${formatCurrency(totalEarned)}", style = MaterialTheme.typography.titleMedium, color = Color.Green, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -160,9 +163,7 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                         Text(
                             text = "${if (isProfit) "PROFIT: +" else "LOSS: "}৳${formatCurrency(netProfitLoss)}",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = Color.White
                         )
                     }
                 }
@@ -188,7 +189,7 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     .testTag("ledger_logs_list"),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(filteredLogs) { _, log ->
+                itemsIndexed(filteredLogs) { index, log ->
                     val isIncome = log.type == "SALE"
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -209,21 +210,14 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row {
                                     Text(
                                         text = if (log.type == "EXPENSE") "EXPENSE" else if (log.type == "SALE") "RETAIL SALES" else "SYSTEM LOG",
                                         color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Blue,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
-                                        maxLines = 1
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = log.dateString,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Text(log.dateString, style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                 }
                             }
 
@@ -231,16 +225,12 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                 Text(
                                     text = if (isIncome) "+৳${formatCurrency(log.totalAmount)}" else if (log.type == "EXPENSE") "-৳${formatCurrency(log.totalAmount)}" else "Update",
                                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Gray,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Gray
                                 )
                                 Text(
                                     text = "${log.quantity} pcs @ ৳${formatCurrency(log.unitPrice)}",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
                             }
                         }
