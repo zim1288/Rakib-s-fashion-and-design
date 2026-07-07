@@ -136,6 +136,15 @@ app.post('/v1/production', async (req, res) => {
     }
 });
 
+app.delete('/v1/production/item/:id', async (req, res) => {
+    try {
+        await UserLog.findOneAndDelete({ id: parseInt(req.params.id), dataType: 'production' });
+        res.status(200).send();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- Transaction Routes ---
 app.get('/v1/transactions', async (req, res) => {
     try {

@@ -86,6 +86,9 @@ interface SareeApiService {
     @POST("production")
     suspend fun syncProduction(@Body items: List<NetworkProductionItem>): Response<Unit>
 
+    @DELETE("production/item/{id}")
+    suspend fun deleteProductionItem(@Path("id") id: Int): Response<Unit>
+
     @GET("transactions")
     suspend fun getTransactions(): List<NetworkTransactionLog>
 
@@ -167,6 +170,10 @@ object SareeApi {
             override suspend fun getProduction(): List<NetworkProductionItem> = emptyList()
             override suspend fun syncProduction(items: List<NetworkProductionItem>): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Synced ${items.size} production items successfully.")
+                return Response.success(Unit)
+            }
+            override suspend fun deleteProductionItem(id: Int): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Deleted production item id:$id successfully.")
                 return Response.success(Unit)
             }
             override suspend fun getTransactions(): List<NetworkTransactionLog> = emptyList()

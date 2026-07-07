@@ -68,6 +68,11 @@ class TallyRepository(private val tallyDao: TallyDao) {
         triggerProductionSync(item)
     }
 
+    suspend fun deleteProductionItem(item: ProductionItem) {
+        tallyDao.deleteProductionItem(item)
+        triggerProductionDeleteSync(item.id)
+    }
+
     // 4. Transaction log triggers with Optimistic Background Sync
     suspend fun insertTransactionLog(log: TransactionLog) {
         val id = tallyDao.insertTransactionLog(log)
@@ -84,6 +89,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
                     NetworkSareeItem(
                         id = item.id,
                         modelName = item.modelName,
+                        sku = item.sku,
+                        color = item.color,
+                        fabricType = item.fabricType,
                         brandCategory = item.brandCategory,
                         unitPrice = item.unitPrice,
                         pieceCount = item.pieceCount,
@@ -129,6 +137,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
                         NetworkProductionItem(
                             id = item.id,
                             modelName = item.modelName,
+                            sku = item.sku,
+                            color = item.color,
+                            fabricType = item.fabricType,
                             quantity = item.quantity,
                             estimatedCompletionDate = item.estimatedCompletionDate,
                             status = item.status,
@@ -144,6 +155,24 @@ class TallyRepository(private val tallyDao: TallyDao) {
             } catch (e: Exception) {
                 Log.e(TAG, "MongoDB production sync failed, saved locally.", e)
                 _syncState.value = SyncState.ERROR("Offline: Local Sync Saved")
+            }
+        }
+    }
+
+    private fun triggerProductionDeleteSync(id: Int) {
+        if (id <= 0) return
+        repositoryScope.launch {
+            _syncState.value = SyncState.SYNCING
+            try {
+                val response = SareeApi.service.deleteProductionItem(id)
+                if (response.isSuccessful) {
+                    _syncState.value = SyncState.SUCCESS
+                } else {
+                    _syncState.value = SyncState.ERROR("MongoDB API code: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "MongoDB production delete failed, operating in offline fallback.", e)
+                _syncState.value = SyncState.ERROR("Offline Mode: Sync pending")
             }
         }
     }
@@ -187,6 +216,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
                     NetworkSareeItem(
                         id = it.id,
                         modelName = it.modelName,
+                        sku = it.sku,
+                        color = it.color,
+                        fabricType = it.fabricType,
                         brandCategory = it.brandCategory,
                         unitPrice = it.unitPrice,
                         pieceCount = it.pieceCount,
@@ -199,6 +231,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
                 NetworkProductionItem(
                     id = it.id,
                     modelName = it.modelName,
+                    sku = it.sku,
+                    color = it.color,
+                    fabricType = it.fabricType,
                     quantity = it.quantity,
                     estimatedCompletionDate = it.estimatedCompletionDate,
                     status = it.status,

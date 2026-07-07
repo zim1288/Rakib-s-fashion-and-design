@@ -59,7 +59,13 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Weaving Loom Production", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                text = "Weaving Loom Production",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Button(
                 onClick = { showAddNewPanel = !showAddNewPanel },
                 colors = ButtonDefaults.buttonColors(containerColor = RoyalCrimson),
@@ -244,17 +250,25 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
 
                             // Interactive toggle switch
                             Column(horizontalAlignment = Alignment.End) {
-                                Switch(
-                                    checked = isCompleted,
-                                    onCheckedChange = { viewModel.toggleProductionStatus(item) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color.Green,
-                                        uncheckedThumbColor = Color.White,
-                                        uncheckedTrackColor = Color.LightGray
-                                    ),
-                                    modifier = Modifier.testTag("toggle_production_${item.id}")
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { viewModel.deleteProductionItem(item) },
+                                        modifier = Modifier.testTag("delete_production_${item.id}")
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red.copy(alpha = 0.7f))
+                                    }
+                                    Switch(
+                                        checked = isCompleted,
+                                        onCheckedChange = { viewModel.toggleProductionStatus(item) },
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = Color.White,
+                                            checkedTrackColor = Color.Green,
+                                            uncheckedThumbColor = Color.White,
+                                            uncheckedTrackColor = Color.LightGray
+                                        ),
+                                        modifier = Modifier.testTag("toggle_production_${item.id}")
+                                    )
+                                }
                                 Text(
                                     text = if (isCompleted) "Finished Stock!" else "Active Loom",
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),

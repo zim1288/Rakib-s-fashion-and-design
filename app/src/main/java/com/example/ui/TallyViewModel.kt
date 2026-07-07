@@ -644,6 +644,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteProductionItem(item: ProductionItem) {
+        viewModelScope.launch {
+            repository.deleteProductionItem(item)
+        }
+    }
+
     // Setters for transaction filters
     fun addStockItemDirectly(name: String, sku: String, color: String, fabricType: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
         viewModelScope.launch {
