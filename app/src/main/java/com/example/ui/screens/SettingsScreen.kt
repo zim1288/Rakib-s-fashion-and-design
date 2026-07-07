@@ -39,7 +39,6 @@ import java.util.Locale
 fun SettingsScreen(viewModel: TallyViewModel) {
     val email by viewModel.currentUserEmail.collectAsStateWithLifecycle()
     val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
-    val lowStockThreshold by viewModel.lowStockThreshold.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -122,50 +121,6 @@ fun SettingsScreen(viewModel: TallyViewModel) {
 
                 Text(
                     text = "If disabled, the application respects the default system visual settings. Toggle it to force dark visuals.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, AntiqueCream),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("Inventory", style = MaterialTheme.typography.labelMedium, color = CardinalRed)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Warning, contentDescription = "Low Stock", tint = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text("Low Stock Threshold", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Slider(
-                        value = lowStockThreshold.toFloat(),
-                        onValueChange = { viewModel.setLowStockThreshold(it.toInt()) },
-                        valueRange = 0f..50f,
-                        steps = 49,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "$lowStockThreshold pcs",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Text(
-                    text = "Items with quantity below this threshold will be highlighted in the stock list.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 8.dp)

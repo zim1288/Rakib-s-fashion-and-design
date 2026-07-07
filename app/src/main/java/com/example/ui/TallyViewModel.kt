@@ -56,6 +56,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentScreen = MutableStateFlow("DASHBOARD") // DASHBOARD, STOCK_HOUSE, STOCK_PRODUCTION, PURCHASE, SELL, HISTORY, SETTINGS
     val currentScreen = _currentScreen.asStateFlow()
 
+    private val _previousScreen = MutableStateFlow<String?>(null)
+
     // Theme state (null = system default, true = dark, false = light)
     private val _isDarkMode = MutableStateFlow<Boolean?>(null)
     val isDarkMode = _isDarkMode.asStateFlow()
@@ -104,6 +106,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             _currentUserEmail.value = savedEmail
             SareeApi.userEmailHeader = savedEmail
             _authState.value = AuthState.Authorized
+            viewModelScope.launch { repository.syncOfflineData() }
         }
 
         if (prefs.contains("is_dark_mode")) {
@@ -149,6 +152,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                         SareeApi.userEmailHeader = user.email
                         _authState.value = AuthState.Authorized
                         prefs.edit { putString("logged_in_email", user.email) }
+                        viewModelScope.launch { repository.syncOfflineData() }
                     }
                 } else {
                     _authState.value = AuthState.Error("Incorrect password. Please try again.")
@@ -180,6 +184,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                             SareeApi.userEmailHeader = restoredUser.email
                             _authState.value = AuthState.Authorized
                             prefs.edit { putString("logged_in_email", restoredUser.email) }
+                            viewModelScope.launch { repository.syncOfflineData() }
                         } else {
                             if (response.code() == 401) {
                                 _authState.value = AuthState.Error("Incorrect password. Please try again.")
@@ -452,7 +457,20 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun navigateTo(screen: String) {
+        if (screen != "SETTINGS") {
+            _previousScreen.value = null
+        }
         _currentScreen.value = screen
+    }
+
+    fun toggleSettings() {
+        if (_currentScreen.value == "SETTINGS") {
+            _currentScreen.value = _previousScreen.value ?: "DASHBOARD"
+            _previousScreen.value = null
+        } else {
+            _previousScreen.value = _currentScreen.value
+            _currentScreen.value = "SETTINGS"
+        }
     }
 
     // CART MANAGEMENT (Purchase screen)
@@ -622,6 +640,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun deleteProductionItem(item: ProductionItem) {
+        viewModelScope.launch {
+            repository.deleteProductionItem(item)
+        }
+    }
+
     fun updateStockItemDetails(id: Int, name: String, sku: String, color: String, fabricType: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
         viewModelScope.launch {
             val existing = sareeItems.value.firstOrNull { it.id == id }
@@ -641,12 +665,6 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteStockItem(item: SareeItem) {
         viewModelScope.launch {
             repository.deleteSareeItem(item)
-        }
-    }
-
-    fun deleteProductionItem(item: ProductionItem) {
-        viewModelScope.launch {
-            repository.deleteProductionItem(item)
         }
     }
 

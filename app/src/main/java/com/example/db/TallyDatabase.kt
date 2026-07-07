@@ -66,6 +66,9 @@ interface TallyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSareeItem(item: SareeItem): Long
 
+    @Query("DELETE FROM saree_inventory")
+    suspend fun deleteAllSareeItems()
+
     @Update
     suspend fun updateSareeItem(item: SareeItem)
 
@@ -87,6 +90,9 @@ interface TallyDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertProductionItem(item: ProductionItem): Long
 
+    @Query("DELETE FROM stock_production")
+    suspend fun deleteAllProductionItems()
+
     @Update
     suspend fun updateProductionItem(item: ProductionItem)
 
@@ -98,6 +104,9 @@ interface TallyDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransactionLog(log: TransactionLog): Long
+
+    @Query("DELETE FROM transaction_logs")
+    suspend fun deleteAllTransactionLogs()
 
     @Query("SELECT * FROM user_accounts WHERE email = :email LIMIT 1")
     suspend fun getUserAccountByEmail(email: String): UserAccount?

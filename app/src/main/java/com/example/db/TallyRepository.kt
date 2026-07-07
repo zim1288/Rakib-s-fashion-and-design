@@ -128,6 +128,24 @@ class TallyRepository(private val tallyDao: TallyDao) {
         }
     }
 
+    private fun triggerProductionDeleteSync(id: Int) {
+        if (id <= 0) return
+        repositoryScope.launch {
+            _syncState.value = SyncState.SYNCING
+            try {
+                val response = SareeApi.service.deleteProductionItem(id)
+                if (response.isSuccessful) {
+                    _syncState.value = SyncState.SUCCESS
+                } else {
+                    _syncState.value = SyncState.ERROR("MongoDB API code: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "MongoDB production delete failed, operating in offline fallback.", e)
+                _syncState.value = SyncState.ERROR("Offline Mode: Sync pending")
+            }
+        }
+    }
+
     private fun triggerProductionSync(item: ProductionItem) {
         repositoryScope.launch {
             _syncState.value = SyncState.SYNCING
@@ -155,24 +173,6 @@ class TallyRepository(private val tallyDao: TallyDao) {
             } catch (e: Exception) {
                 Log.e(TAG, "MongoDB production sync failed, saved locally.", e)
                 _syncState.value = SyncState.ERROR("Offline: Local Sync Saved")
-            }
-        }
-    }
-
-    private fun triggerProductionDeleteSync(id: Int) {
-        if (id <= 0) return
-        repositoryScope.launch {
-            _syncState.value = SyncState.SYNCING
-            try {
-                val response = SareeApi.service.deleteProductionItem(id)
-                if (response.isSuccessful) {
-                    _syncState.value = SyncState.SUCCESS
-                } else {
-                    _syncState.value = SyncState.ERROR("MongoDB API code: ${response.code()}")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "MongoDB production delete failed, operating in offline fallback.", e)
-                _syncState.value = SyncState.ERROR("Offline Mode: Sync pending")
             }
         }
     }
@@ -210,6 +210,7 @@ class TallyRepository(private val tallyDao: TallyDao) {
         try {
             val sarees = tallyDao.getAllSareeItems().first()
             val prodItems = tallyDao.getAllProductionItems().first()
+            val localTransactions = tallyDao.getAllTransactionLogs().first()
 
             SareeApi.service.syncInventory(
                 sarees.map {
@@ -240,6 +241,94 @@ class TallyRepository(private val tallyDao: TallyDao) {
                     imageUrl = it.imageUrl
                 )
             })
+
+            // Push local transactions one-by-one to server to ensure offline transactions are synced
+            localTransactions.forEach { log ->
+                try {
+                    SareeApi.service.logTransaction(
+                        NetworkTransactionLog(
+                            id = log.id,
+                            type = log.type,
+                            modelName = log.modelName,
+                            sku = log.sku,
+                            color = log.color,
+                            fabricType = log.fabricType,
+                            quantity = log.quantity,
+                            unitPrice = log.unitPrice,
+                            totalAmount = log.totalAmount,
+                            timestamp = log.timestamp,
+                            dateString = log.dateString
+                        )
+                    )
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to push queued transaction ${log.id}", e)
+                }
+            }
+
+            // FETCH data from server to keep this device in sync
+            val serverInventory = SareeApi.service.getInventory()
+            val serverProduction = SareeApi.service.getProduction()
+            val serverTransactions = SareeApi.service.getTransactions()
+
+            // Update local database with server truth
+            if (serverInventory.isNotEmpty()) {
+                tallyDao.deleteAllSareeItems()
+                serverInventory.forEach { netItem ->
+                    tallyDao.insertSareeItem(
+                        SareeItem(
+                            id = netItem.id ?: 0,
+                            modelName = netItem.modelName,
+                            sku = netItem.sku,
+                            color = netItem.color,
+                            fabricType = netItem.fabricType,
+                            brandCategory = netItem.brandCategory,
+                            unitPrice = netItem.unitPrice,
+                            pieceCount = netItem.pieceCount,
+                            imageUrl = netItem.imageUrl
+                        )
+                    )
+                }
+            }
+
+            if (serverProduction.isNotEmpty()) {
+                tallyDao.deleteAllProductionItems()
+                serverProduction.forEach { netItem ->
+                    tallyDao.insertProductionItem(
+                        ProductionItem(
+                            id = netItem.id ?: 0,
+                            modelName = netItem.modelName,
+                            sku = netItem.sku,
+                            color = netItem.color,
+                            fabricType = netItem.fabricType,
+                            quantity = netItem.quantity,
+                            estimatedCompletionDate = netItem.estimatedCompletionDate,
+                            status = netItem.status,
+                            imageUrl = netItem.imageUrl
+                        )
+                    )
+                }
+            }
+
+            if (serverTransactions.isNotEmpty()) {
+                tallyDao.deleteAllTransactionLogs()
+                serverTransactions.forEach { netItem ->
+                    tallyDao.insertTransactionLog(
+                        TransactionLog(
+                            id = netItem.id ?: 0,
+                            type = netItem.type,
+                            modelName = netItem.modelName,
+                            sku = netItem.sku,
+                            color = netItem.color,
+                            fabricType = netItem.fabricType,
+                            quantity = netItem.quantity,
+                            unitPrice = netItem.unitPrice,
+                            totalAmount = netItem.totalAmount,
+                            timestamp = netItem.timestamp,
+                            dateString = netItem.dateString
+                        )
+                    )
+                }
+            }
 
             _syncState.value = SyncState.SUCCESS
         } catch (e: Exception) {

@@ -46,7 +46,7 @@ fun AuthorizedLayout(viewModel: TallyViewModel, currentScreen: String, syncState
         TopBanner(
             userEmail = email,
             syncState = syncState,
-            onSettings = { viewModel.navigateTo("SETTINGS") },
+            onSettings = { viewModel.toggleSettings() },
             onBackToDashboard = { viewModel.navigateTo("DASHBOARD") },
             showBackButton = currentScreen != "DASHBOARD",
         ) {

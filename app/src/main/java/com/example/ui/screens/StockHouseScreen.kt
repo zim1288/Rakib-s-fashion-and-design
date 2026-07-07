@@ -59,17 +59,16 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
     val valuation = sarees.filter { it.brandCategory == selectedBrand }.sumOf { it.totalValue }
 
     var itemToEdit by remember { mutableStateOf<SareeItem?>(null) }
-
-    var isAddingItem by remember { mutableStateOf(false) }
+    var isAdjustingThreshold by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { isAddingItem = true },
+                onClick = { isAdjustingThreshold = true },
                 containerColor = RoyalCrimson,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Item")
+                Icon(Icons.Default.Warning, contentDescription = "Adjust Threshold")
             }
         }
     ) { paddingValues ->
@@ -323,13 +322,52 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
         }
     }
 
-    if (isAddingItem) {
-        EditItemDialog(
-            item = SareeItem(modelName = "", sku = "", color = "", fabricType = "", brandCategory = selectedBrand, unitPrice = 0.0, pieceCount = 0),
-            onDismiss = { isAddingItem = false }
-        ) { name, sku, color, fabricType, category, price, count, imageUrl ->
-            viewModel.addStockItemDirectly(name, sku, color, fabricType, category, price, count, imageUrl)
-            isAddingItem = false
+    if (isAdjustingThreshold) {
+        Dialog(onDismissRequest = { isAdjustingThreshold = false }) {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Warning, contentDescription = "Low Stock", tint = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Low Stock Threshold", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Slider(
+                            value = lowStockThreshold.toFloat(),
+                            onValueChange = { viewModel.setLowStockThreshold(it.toInt()) },
+                            valueRange = 0f..50f,
+                            steps = 49,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "$lowStockThreshold pcs",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "Items with quantity below this threshold will be highlighted.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { isAdjustingThreshold = false },
+                        modifier = Modifier.align(Alignment.End),
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalCrimson, contentColor = Color.White)
+                    ) {
+                        Text("Done")
+                    }
+                }
+            }
         }
     }
 }
