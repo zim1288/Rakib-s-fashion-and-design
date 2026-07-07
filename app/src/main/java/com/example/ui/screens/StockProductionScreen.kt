@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
-import androidx.compose.animation.*
+import com.example.ui.TallyViewModel
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.AsyncImage
@@ -15,52 +16,43 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.db.*
-import com.example.ui.TallyViewModel
 import com.example.ui.theme.*
-import java.text.NumberFormat
-import java.util.Locale
 
-@OptIn(ExperimentalAnimationApi::class)
-// ---------------- 2. STOCK IN PRODUCTION ----------------
 @Composable
 fun StockProductionScreen(viewModel: TallyViewModel) {
     val items by viewModel.productionItems.collectAsStateWithLifecycle()
+    val darkTheme = isSystemInDarkTheme()
 
     var showAddNewPanel by remember { mutableStateOf(false) }
     var newModel by remember { mutableStateOf("") }
     var newQty by remember { mutableStateOf("") }
-    var newDate by remember { mutableStateOf("2026-06-30") }
+    val defaultDate = "2026-06-30"
+    var newDate by remember { mutableStateOf(defaultDate) }
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { imageUrlInput = it.toString() }
+        if (uri != null) {
+            imageUrlInput = uri.toString()
+        }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -89,20 +81,14 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                     .testTag("add_production_card")
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text("Spin Fresh Loom Production Lot", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                    Text("Spin Fresh Loom Production Lot", style = MaterialTheme.typography.titleSmall, color = RoyalCrimson)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = newModel,
                         onValueChange = { newModel = it },
                         label = { Text("Saree Model Detail") },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -112,26 +98,14 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                             label = { Text("Loom Pieces") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
+                            modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
                             value = newDate,
                             onValueChange = { newDate = it },
                             label = { Text("Estimated Date") },
                             singleLine = true,
-                            modifier = Modifier.weight(1.2f),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
+                            modifier = Modifier.weight(1.2f)
                         )
                     }
 
@@ -168,10 +142,11 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                     Button(
                         onClick = {
                             val qtyInt = newQty.toIntOrNull() ?: 10
-                            if (newModel.isNotBlank()) {
+                            if (newModel.isNotBlank() && qtyInt > 0) {
                                 viewModel.addNewProductionItem(newModel, qtyInt, newDate, imageUrlInput)
                                 newModel = ""
                                 newQty = ""
+                                newDate = defaultDate
                                 imageUrlInput = null
                                 showAddNewPanel = false
                             }
@@ -206,7 +181,6 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
             ) {
                 itemsIndexed(items) { index, item ->
                     val isCompleted = item.status == "Completed"
-                    val darkTheme = isSystemInDarkTheme()
                     val completedBgColor = if (darkTheme) Color(0xFF1B3B2B) else Color(0xFFEFFDF5)
                     val statusColor = if (isCompleted) {
                         if (darkTheme) Color(0xFF81C784) else Color(0xFF0F5132)
@@ -255,28 +229,17 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                                     Text(
                                         text = item.status,
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = statusColor,
-                                        maxLines = 1
+                                        color = statusColor
                                     )
                                 }
                                 Text(
-                                    text = item.modelName,
+                                    item.modelName,
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Text(
-                                    text = "Target: ${item.quantity} pieces",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1
-                                )
-                                Text(
-                                    text = "Est: ${item.estimatedCompletionDate}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Text("Quantity Target: ${item.quantity} pieces", style = MaterialTheme.typography.bodySmall)
+                                Text("Weaver Completion: ${item.estimatedCompletionDate}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                             }
 
                             // Interactive toggle switch
