@@ -39,6 +39,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import com.example.db.*
 import com.example.ui.theme.*
+import com.example.utils.ImageHelper
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -389,20 +390,19 @@ fun EditItemDialog(
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { imageUrl = it.toString() }
+        uri?.let {
+            val savedUri = ImageHelper.copyUriToInternalStorage(context, it)
+            if (savedUri != null) {
+                imageUrl = savedUri
+            }
+        }
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
         bitmap?.let {
-            try {
-                val file = File(context.cacheDir, "camera_${System.currentTimeMillis()}.jpg")
-                val outputStream = FileOutputStream(file)
-                it.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                outputStream.flush()
-                outputStream.close()
-                imageUrl = Uri.fromFile(file).toString()
-            } catch (e: Exception) {
-                e.printStackTrace()
+            val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
+            if (savedUri != null) {
+                imageUrl = savedUri
             }
         }
     }

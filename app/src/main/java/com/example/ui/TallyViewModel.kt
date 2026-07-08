@@ -37,6 +37,9 @@ data class CartItem(
     val unitCost: Double,
     val quantity: Int,
     val imageUrl: String? = null,
+    val sku: String = "",
+    val color: String = "",
+    val fabricType: String = ""
 )
 
 class TallyViewModel(application: Application) : AndroidViewModel(application) {
@@ -474,9 +477,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // CART MANAGEMENT (Purchase screen)
-    fun addToCart(modelName: String, brand: String, cost: Double, quantity: Int, imageUrl: String? = null) {
+    fun addToCart(modelName: String, brand: String, cost: Double, quantity: Int, imageUrl: String? = null, sku: String = "", color: String = "", fabricType: String = "") {
         if (modelName.isBlank() || quantity <= 0 || cost <= 0) return
-        purchaseCart.add(CartItem(modelName.trim(), brand, cost, quantity, imageUrl))
+        purchaseCart.add(CartItem(modelName.trim(), brand, cost, quantity, imageUrl, sku, color, fabricType))
     }
 
     fun removeFromCart(index: Int) {
@@ -513,7 +516,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     val updated = existing.copy(
                         pieceCount = existing.pieceCount + cartItem.quantity,
                         unitPrice = cartItem.unitCost, // Update to latest purchase cost/price indicator
-                        imageUrl = cartItem.imageUrl ?: existing.imageUrl
+                        imageUrl = cartItem.imageUrl ?: existing.imageUrl,
+                        sku = if (cartItem.sku.isNotBlank()) cartItem.sku else existing.sku,
+                        color = if (cartItem.color.isNotBlank()) cartItem.color else existing.color,
+                        fabricType = if (cartItem.fabricType.isNotBlank()) cartItem.fabricType else existing.fabricType
                     )
                     repository.updateSareeItem(updated)
                 } else {
@@ -523,7 +529,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                         brandCategory = cartItem.brandCategory,
                         unitPrice = cartItem.unitCost,
                         pieceCount = cartItem.quantity,
-                        imageUrl = cartItem.imageUrl
+                        imageUrl = cartItem.imageUrl,
+                        sku = cartItem.sku,
+                        color = cartItem.color,
+                        fabricType = cartItem.fabricType
                     )
                     repository.insertSareeItem(newItem)
                 }
@@ -595,7 +604,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 if (existing != null) {
                     repository.updateSareeItem(existing.copy(
                         pieceCount = existing.pieceCount + item.quantity,
-                        imageUrl = item.imageUrl ?: existing.imageUrl
+                        imageUrl = item.imageUrl ?: existing.imageUrl,
+                        sku = if (item.sku.isNotBlank()) item.sku else existing.sku,
+                        color = if (item.color.isNotBlank()) item.color else existing.color,
+                        fabricType = if (item.fabricType.isNotBlank()) item.fabricType else existing.fabricType
                     ))
                 } else {
                     repository.insertSareeItem(
@@ -604,7 +616,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                             brandCategory = "Rakib Silk",
                             unitPrice = 5000.0, // Default estimated cost
                             pieceCount = item.quantity,
-                            imageUrl = item.imageUrl
+                            imageUrl = item.imageUrl,
+                            sku = item.sku,
+                            color = item.color,
+                            fabricType = item.fabricType
                         )
                     )
                 }
@@ -626,7 +641,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun addNewProductionItem(modelName: String, qty: Int, completionDate: String, imageUrl: String? = null) {
+    fun addNewProductionItem(modelName: String, qty: Int, completionDate: String, imageUrl: String? = null, sku: String = "", color: String = "", fabricType: String = "") {
         if (modelName.isBlank() || qty <= 0 || completionDate.isBlank()) return
         viewModelScope.launch {
             val item = ProductionItem(
@@ -634,7 +649,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 quantity = qty,
                 estimatedCompletionDate = completionDate.trim(),
                 status = "In Progress",
-                imageUrl = imageUrl
+                imageUrl = imageUrl,
+                sku = sku,
+                color = color,
+                fabricType = fabricType
             )
             repository.insertProductionItem(item)
         }

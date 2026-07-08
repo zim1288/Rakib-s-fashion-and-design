@@ -40,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
 import com.example.ui.theme.*
+import com.example.utils.ImageHelper
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -53,11 +54,28 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
     var categoryInput by remember { mutableStateOf("Rakib Silk") } // Rakib Silk / Rakib Fashion
     var costInput by remember { mutableStateOf("") }
     var qtyInput by remember { mutableStateOf("") }
+    var skuInput by remember { mutableStateOf("") }
+    var colorInput by remember { mutableStateOf("") }
+    var fabricTypeInput by remember { mutableStateOf("") }
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            imageUrlInput = uri.toString()
+            val savedUri = ImageHelper.copyUriToInternalStorage(context, uri)
+            if (savedUri != null) {
+                imageUrlInput = savedUri
+            }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        bitmap?.let {
+            val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
+            if (savedUri != null) {
+                imageUrlInput = savedUri
+            }
         }
     }
 
@@ -84,6 +102,35 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = skuInput,
+                    onValueChange = { skuInput = it },
+                    label = { Text("SKU") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = colorInput,
+                        onValueChange = { colorInput = it },
+                        label = { Text("Color") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = fabricTypeInput,
+                        onValueChange = { fabricTypeInput = it },
+                        label = { Text("Fabric Type") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -142,19 +189,25 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                             contentDescription = "Selected Image",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(64.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(Color.LightGray.copy(alpha = 0.3f))
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                     }
-                    OutlinedButton(
-                        onClick = { launcher.launch("image/*") },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.AddCircle, contentDescription = "Pick Image", modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (imageUrlInput.isNullOrBlank()) "Add Picture" else "Change Picture")
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { launcher.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Gallery")
+                        }
+                        OutlinedButton(
+                            onClick = { cameraLauncher.launch(null) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Camera")
+                        }
                     }
                 }
 
@@ -165,9 +218,12 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                         val cost = costInput.toDoubleOrNull() ?: 0.0
                         val qty = qtyInput.toIntOrNull() ?: 0
                         if (sareeInput.isNotBlank() && cost > 0 && qty > 0) {
-                            viewModel.addToCart(sareeInput, categoryInput, cost, qty, imageUrlInput)
+                            viewModel.addToCart(sareeInput, categoryInput, cost, qty, imageUrlInput, skuInput, colorInput, fabricTypeInput)
                             // Clear inputs
                             sareeInput = ""
+                            skuInput = ""
+                            colorInput = ""
+                            fabricTypeInput = ""
                             costInput = ""
                             qtyInput = ""
                             imageUrlInput = null

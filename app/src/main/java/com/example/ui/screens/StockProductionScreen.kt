@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
 import com.example.ui.theme.*
+import com.example.utils.ImageHelper
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -49,18 +50,33 @@ import java.util.Locale
 @Composable
 fun StockProductionScreen(viewModel: TallyViewModel) {
     val items by viewModel.productionItems.collectAsStateWithLifecycle()
-    val darkTheme = isSystemInDarkTheme()
 
     var showAddNewPanel by remember { mutableStateOf(false) }
     var newModel by remember { mutableStateOf("") }
     var newQty by remember { mutableStateOf("") }
-    val defaultDate = "2026-06-30"
-    var newDate by remember { mutableStateOf(defaultDate) }
+    var newDate by remember { mutableStateOf("2026-06-30") }
+    var newSku by remember { mutableStateOf("") }
+    var newColor by remember { mutableStateOf("") }
+    var newFabricType by remember { mutableStateOf("") }
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
-            imageUrlInput = uri.toString()
+            val savedUri = ImageHelper.copyUriToInternalStorage(context, uri)
+            if (savedUri != null) {
+                imageUrlInput = savedUri
+            }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        bitmap?.let {
+            val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
+            if (savedUri != null) {
+                imageUrlInput = savedUri
+            }
         }
     }
 
@@ -112,6 +128,31 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = newSku,
+                        onValueChange = { newSku = it },
+                        label = { Text("SKU") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = newColor,
+                            onValueChange = { newColor = it },
+                            label = { Text("Color") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = newFabricType,
+                            onValueChange = { newFabricType = it },
+                            label = { Text("Fabric Type") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = newQty,
@@ -142,19 +183,25 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                                 contentDescription = "Selected Image",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
-                                    .size(40.dp)
+                                    .size(64.dp)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.LightGray.copy(alpha = 0.3f))
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                         }
-                        OutlinedButton(
-                            onClick = { launcher.launch("image/*") },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(Icons.Default.AddCircle, contentDescription = "Pick Image", modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(if (imageUrlInput.isNullOrBlank()) "Add Picture" else "Change Picture")
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { launcher.launch("image/*") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Gallery")
+                            }
+                            OutlinedButton(
+                                onClick = { cameraLauncher.launch(null) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Camera")
+                            }
                         }
                     }
 
@@ -163,11 +210,13 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                     Button(
                         onClick = {
                             val qtyInt = newQty.toIntOrNull() ?: 10
-                            if (newModel.isNotBlank() && qtyInt > 0) {
-                                viewModel.addNewProductionItem(newModel, qtyInt, newDate, imageUrlInput)
+                            if (newModel.isNotBlank()) {
+                                viewModel.addNewProductionItem(newModel, qtyInt, newDate, imageUrlInput, newSku, newColor, newFabricType)
                                 newModel = ""
+                                newSku = ""
+                                newColor = ""
+                                newFabricType = ""
                                 newQty = ""
-                                newDate = defaultDate
                                 imageUrlInput = null
                                 showAddNewPanel = false
                             }
@@ -202,6 +251,7 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
             ) {
                 itemsIndexed(items) { index, item ->
                     val isCompleted = item.status == "Completed"
+                    val darkTheme = isSystemInDarkTheme()
                     val completedBgColor = if (darkTheme) Color(0xFF1B3B2B) else Color(0xFFEFFDF5)
                     val statusColor = if (isCompleted) {
                         if (darkTheme) Color(0xFF81C784) else Color(0xFF0F5132)
@@ -253,12 +303,7 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                                         color = statusColor
                                     )
                                 }
-                                Text(
-                                    item.modelName,
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Text(item.modelName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
                                 Text("Quantity Target: ${item.quantity} pieces", style = MaterialTheme.typography.bodySmall)
                                 Text("Weaver Completion: ${item.estimatedCompletionDate}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                             }
