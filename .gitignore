@@ -1,24 +1,29 @@
+# IDE Settings
 *.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.idea/
+.kotlin/
+.vscode/
+
+# Build & Artifacts
+.gradle/
+/build/
+app/build/
+.artifacts/
+.build-outputs/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# Node & Dependencies
+node_modules/
+backend/node_modules/
+
+# Secrets & Local Properties
 local.properties
 .env
-debug.keystore
 backend/.env
-backend/node_modules/
-.artifacts/node_modules/
-app/build/
+debug.keystore
 debug.keystore.base64
-.build-outputs/
+
+# OS Generated
+.DS_Store
