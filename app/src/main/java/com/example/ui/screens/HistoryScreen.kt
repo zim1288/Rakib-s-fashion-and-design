@@ -8,7 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -46,12 +46,14 @@ fun HistoryScreen(viewModel: TallyViewModel) {
     val logs by viewModel.transactionLogs.collectAsStateWithLifecycle()
     val monthFilter by viewModel.selectedMonthFilter.collectAsStateWithLifecycle()
     val yearFilter by viewModel.selectedYearFilter.collectAsStateWithLifecycle()
+    val typeFilter by viewModel.selectedTypeFilter.collectAsStateWithLifecycle()
 
     val availableMonths = listOf("All", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     val availableYears = listOf("All", "2026", "2027", "2028")
+    val availableTypes = listOf("All", "SALE", "EXPENSE", "SYSTEM LOG")
 
-    // Filter logs in Memory matching selected month / year
-    val filteredLogs = remember(logs, monthFilter, yearFilter) {
+    // Filter logs in Memory matching selected month / year / type
+    val filteredLogs = remember(logs, monthFilter, yearFilter, typeFilter) {
         logs.filter { log ->
             val matchYear = if (yearFilter == "All") true else log.dateString.startsWith(yearFilter)
             val matchMonth = if (monthFilter == "All") true else {
@@ -61,7 +63,8 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     log.dateString.contains(expectedSub)
                 } else true
             }
-            matchYear && matchMonth
+            val matchType = if (typeFilter == "All") true else log.type == typeFilter
+            matchYear && matchMonth && matchType
         }
     }
 
@@ -82,41 +85,123 @@ fun HistoryScreen(viewModel: TallyViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            var monthExpanded by remember { mutableStateOf(false) }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Select Month Filter", style = MaterialTheme.typography.labelSmall)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray.copy(alpha = 0.2f))
-                        .clickable { /* Simulate simpler dropdown cycles for faster UX */
-                            val nextIdx = (availableMonths.indexOf(monthFilter) + 1) % availableMonths.size
-                            viewModel.setMonthFilter(availableMonths[nextIdx])
-                        }
-                        .padding(12.dp)
-                        .testTag("month_filter_trigger"),
-                    contentAlignment = Alignment.Center
+                Text("Select Month Filter", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground)
+                @OptIn(ExperimentalMaterial3Api::class)
+                ExposedDropdownMenuBox(
+                    expanded = monthExpanded,
+                    onExpandedChange = { monthExpanded = it }
                 ) {
-                    Text(monthFilter, fontWeight = FontWeight.Bold, color = RoyalCrimson)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                            .clickable { monthExpanded = true }
+                            .padding(12.dp)
+                            .testTag("month_filter_trigger")
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(monthFilter, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                    ExposedDropdownMenu(
+                        expanded = monthExpanded,
+                        onDismissRequest = { monthExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        availableMonths.forEach { month ->
+                            DropdownMenuItem(
+                                text = { Text(month, color = MaterialTheme.colorScheme.onSurface) },
+                                onClick = {
+                                    viewModel.setMonthFilter(month)
+                                    monthExpanded = false
+                                }
+                            )
+                        }
+                    }
                 }
             }
 
+            var yearExpanded by remember { mutableStateOf(false) }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Select Calendar Year", style = MaterialTheme.typography.labelSmall)
+                Text("Select Calendar Year", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground)
+                @OptIn(ExperimentalMaterial3Api::class)
+                ExposedDropdownMenuBox(
+                    expanded = yearExpanded,
+                    onExpandedChange = { yearExpanded = it }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                            .clickable { yearExpanded = true }
+                            .padding(12.dp)
+                            .testTag("year_filter_trigger")
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(yearFilter, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    }
+                    ExposedDropdownMenu(
+                        expanded = yearExpanded,
+                        onDismissRequest = { yearExpanded = false },
+                        modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        availableYears.forEach { year ->
+                            DropdownMenuItem(
+                                text = { Text(year, color = MaterialTheme.colorScheme.onSurface) },
+                                onClick = {
+                                    viewModel.setYearFilter(year)
+                                    yearExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Type Dropdown Selector
+        var typeExpanded by remember { mutableStateOf(false) }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text("Select Log Type", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground)
+            @OptIn(ExperimentalMaterial3Api::class)
+            ExposedDropdownMenuBox(
+                expanded = typeExpanded,
+                onExpandedChange = { typeExpanded = it }
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color.LightGray.copy(alpha = 0.2f))
-                        .clickable {
-                            val nextIdx = (availableYears.indexOf(yearFilter) + 1) % availableYears.size
-                            viewModel.setYearFilter(availableYears[nextIdx])
-                        }
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        .clickable { typeExpanded = true }
                         .padding(12.dp)
-                        .testTag("year_filter_trigger"),
+                        .testTag("type_filter_trigger")
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(yearFilter, fontWeight = FontWeight.Bold, color = RoyalCrimson)
+                    Text(typeFilter, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+                ExposedDropdownMenu(
+                    expanded = typeExpanded,
+                    onDismissRequest = { typeExpanded = false },
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                ) {
+                    availableTypes.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type, color = MaterialTheme.colorScheme.onSurface) },
+                            onClick = {
+                                viewModel.setTypeFilter(type)
+                                typeExpanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -189,7 +274,7 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     .testTag("ledger_logs_list"),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(filteredLogs) { index, log ->
+                items(filteredLogs) { log ->
                     val isIncome = log.type == "SALE"
                     Card(
                         modifier = Modifier.fillMaxWidth(),

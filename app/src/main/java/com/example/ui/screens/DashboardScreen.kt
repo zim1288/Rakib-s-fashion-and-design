@@ -91,12 +91,12 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Active Models", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
                             Text(
-                                sarees.size.toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = SoftEggshell,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
+                            sarees.size.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SoftEggshell,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Total Weaving", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)

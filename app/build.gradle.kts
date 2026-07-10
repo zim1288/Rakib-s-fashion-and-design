@@ -30,10 +30,10 @@ android {
     }
     create("debugConfig") {
       val keystoreFile = file("${rootDir}/debug.keystore")
-      if (keystoreFile.exists()) {
-        storeFile = keystoreFile
+      storeFile = if (keystoreFile.exists()) {
+        keystoreFile
       } else {
-        storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
+        file("${System.getProperty("user.home")}/.android/debug.keystore")
       }
       storePassword = "android"
       keyAlias = "androiddebugkey"
@@ -101,6 +101,7 @@ dependencies {
   // implementation(libs.androidx.navigation.compose)
   implementation(libs.androidx.room.ktx)
   implementation(libs.androidx.room.runtime)
+  implementation(libs.androidx.work.runtime.ktx)
   implementation(libs.coil.compose)
   implementation(libs.converter.moshi)
   implementation(libs.firebase.ai)

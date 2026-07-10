@@ -100,7 +100,7 @@ interface SareeApiService {
 
     @POST("auth/register")
     suspend fun registerUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
-
+    
     @POST("auth/login")
     suspend fun loginUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
 
@@ -172,6 +172,7 @@ object SareeApi {
                 Log.d(TAG, "Mock MongoDB: Synced ${items.size} production items successfully.")
                 return Response.success(Unit)
             }
+
             override suspend fun deleteProductionItem(id: Int): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Deleted production item id:$id successfully.")
                 return Response.success(Unit)
@@ -189,12 +190,12 @@ object SareeApi {
                 Log.d(TAG, "Mock MongoDB: Registered user ${request.email} successfully.")
                 return Response.success(Unit)
             }
-
+            
             override suspend fun loginUserOnServer(request: NetworkUserAuthRequest): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Logged in user ${request.email} successfully.")
                 return Response.success(Unit)
             }
-
+            
             override suspend fun checkUserOnServer(request: NetworkEmailRequest): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Checked user ${request.email} successfully.")
                 return Response.success(Unit)

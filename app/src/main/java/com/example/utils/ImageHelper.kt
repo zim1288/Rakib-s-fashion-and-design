@@ -5,36 +5,32 @@ import android.graphics.Bitmap
 import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
-import java.util.UUID
 
 object ImageHelper {
-    fun copyUriToInternalStorage(context: Context, uri: Uri): String? {
+    fun saveBitmapToInternalStorage(context: Context, bitmap: Bitmap): String? {
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val fileName = "img_${UUID.randomUUID()}.jpg"
-            val file = File(context.filesDir, fileName)
+            val file = File(context.filesDir, "image_${System.currentTimeMillis()}.jpg")
             val outputStream = FileOutputStream(file)
-            inputStream?.use { input ->
-                outputStream.use { output ->
-                    input.copyTo(output)
-                }
-            }
-            file.absolutePath
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+            outputStream.flush()
+            outputStream.close()
+            Uri.fromFile(file).toString()
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
-    fun saveBitmapToInternalStorage(context: Context, bitmap: Bitmap): String? {
+    fun copyUriToInternalStorage(context: Context, uri: Uri): String? {
         return try {
-            val fileName = "img_${UUID.randomUUID()}.jpg"
-            val file = File(context.filesDir, fileName)
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+            val file = File(context.filesDir, "image_${System.currentTimeMillis()}.jpg")
             val outputStream = FileOutputStream(file)
-            outputStream.use { output ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, output)
-            }
-            file.absolutePath
+            inputStream.copyTo(outputStream)
+            inputStream.close()
+            outputStream.flush()
+            outputStream.close()
+            Uri.fromFile(file).toString()
         } catch (e: Exception) {
             e.printStackTrace()
             null

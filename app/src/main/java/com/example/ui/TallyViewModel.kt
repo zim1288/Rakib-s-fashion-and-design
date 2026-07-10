@@ -91,7 +91,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     val productionItems = repository.allProductionItems.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val transactionLogs = repository.allTransactionLogs.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    // Cart list for Purchase Product Sreen
+    // Cart list for Purchase Product Screen
     val purchaseCart = mutableStateListOf<CartItem>()
 
     // Transaction history search/filters state
@@ -100,6 +100,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedYearFilter = MutableStateFlow("All") // "All", "2026", "2027", "2028"...
     val selectedYearFilter = _selectedYearFilter.asStateFlow()
+
+    private val _selectedTypeFilter = MutableStateFlow("All") // "All", "SALE", "PURCHASE", "SYSTEM LOG", "EXPENSE"
+    val selectedTypeFilter = _selectedTypeFilter.asStateFlow()
 
     // Prepopulate starting database content on startup if totally empty
     init {
@@ -130,7 +133,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun prepopulateDatabase() {
+    private fun prepopulateDatabase() {
         // No dummy data for real testing
     }
 
@@ -517,9 +520,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                         pieceCount = existing.pieceCount + cartItem.quantity,
                         unitPrice = cartItem.unitCost, // Update to latest purchase cost/price indicator
                         imageUrl = cartItem.imageUrl ?: existing.imageUrl,
-                        sku = if (cartItem.sku.isNotBlank()) cartItem.sku else existing.sku,
-                        color = if (cartItem.color.isNotBlank()) cartItem.color else existing.color,
-                        fabricType = if (cartItem.fabricType.isNotBlank()) cartItem.fabricType else existing.fabricType
+                        sku = cartItem.sku.ifBlank { existing.sku },
+                        color = cartItem.color.ifBlank { existing.color },
+                        fabricType = cartItem.fabricType.ifBlank { existing.fabricType }
                     )
                     repository.updateSareeItem(updated)
                 } else {
@@ -605,9 +608,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     repository.updateSareeItem(existing.copy(
                         pieceCount = existing.pieceCount + item.quantity,
                         imageUrl = item.imageUrl ?: existing.imageUrl,
-                        sku = if (item.sku.isNotBlank()) item.sku else existing.sku,
-                        color = if (item.color.isNotBlank()) item.color else existing.color,
-                        fabricType = if (item.fabricType.isNotBlank()) item.fabricType else existing.fabricType
+                        sku = item.sku.ifBlank { existing.sku },
+                        color = item.color.ifBlank { existing.color },
+                        fabricType = item.fabricType.ifBlank { existing.fabricType }
                     ))
                 } else {
                     repository.insertSareeItem(
@@ -687,27 +690,46 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Setters for transaction filters
-    fun addStockItemDirectly(name: String, sku: String, color: String, fabricType: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
-        viewModelScope.launch {
-            val item = SareeItem(
-                modelName = name,
-                sku = sku,
-                color = color,
-                fabricType = fabricType,
-                brandCategory = category,
-                unitPrice = price,
-                pieceCount = count,
-                imageUrl = imageUrl
-            )
-            repository.insertSareeItem(item)
-        }
-    }
     fun setMonthFilter(month: String) {
         _selectedMonthFilter.value = month
     }
 
     fun setYearFilter(year: String) {
         _selectedYearFilter.value = year
+    }
+
+    fun setTypeFilter(type: String) {
+        _selectedTypeFilter.value = type
+    }
+
+    fun exportInventory(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            val items = repository.allSareeItems.firstOrNull() ?: emptyList()
+            val result = com.example.utils.CSVExportUtils.exportInventoryToUri(context, items, uri)
+            if (result.isSuccess) {
+                android.widget.Toast.makeText(context, "Exported successfully", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                android.widget.Toast.makeText(context, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun exportTransactions(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            val logs = repository.allTransactionLogs.firstOrNull() ?: emptyList()
+            val result = com.example.utils.CSVExportUtils.exportTransactionsToUri(context, logs, uri)
+            if (result.isSuccess) {
+                android.widget.Toast.makeText(context, "Exported successfully", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                android.widget.Toast.makeText(context, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun triggerManualBackup(context: android.content.Context) {
+        val request = androidx.work.OneTimeWorkRequestBuilder<com.example.workers.DatabaseBackupWorker>().build()
+        androidx.work.WorkManager.getInstance(context).enqueue(request)
+        android.widget.Toast.makeText(context, "Backup triggered in background", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     fun forceSync() {

@@ -145,9 +145,9 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true
             )
-
+            
             Spacer(modifier = Modifier.height(8.dp))
-
+            
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = fabricFilter,
@@ -169,8 +169,8 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
 
             val filteredList = sarees.filter { it.brandCategory == selectedBrand }.filter {
                 (searchQuery.isBlank() || it.modelName.contains(searchQuery, ignoreCase = true) || it.sku.contains(searchQuery, ignoreCase = true)) &&
-                        (fabricFilter == "All Fabrics" || fabricFilter.isBlank() || it.fabricType.contains(fabricFilter, ignoreCase = true)) &&
-                        (colorFilter == "All Colors" || colorFilter.isBlank() || it.color.contains(colorFilter, ignoreCase = true))
+                (fabricFilter == "All Fabrics" || fabricFilter.isBlank() || it.fabricType.contains(fabricFilter, ignoreCase = true)) &&
+                (colorFilter == "All Colors" || colorFilter.isBlank() || it.color.contains(colorFilter, ignoreCase = true))
             }
 
             if (filteredList.isEmpty()) {
@@ -322,7 +322,7 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
             itemToEdit = null
         }
     }
-
+    
     if (isAdjustingThreshold) {
         Dialog(onDismissRequest = { isAdjustingThreshold = false }) {
             Card(
@@ -390,16 +390,16 @@ fun EditItemDialog(
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
+        uri?.let { 
             val savedUri = ImageHelper.copyUriToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrl = savedUri
             }
         }
     }
-
+    
     val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let {
+        bitmap?.let { 
             val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrl = savedUri

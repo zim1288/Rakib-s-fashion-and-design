@@ -59,7 +59,7 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
     var newColor by remember { mutableStateOf("") }
     var newFabricType by remember { mutableStateOf("") }
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
-
+    
     val context = androidx.compose.ui.platform.LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
@@ -70,9 +70,9 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
             }
         }
     }
-
+    
     val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let {
+        bitmap?.let { 
             val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrlInput = savedUri

@@ -34,6 +34,8 @@ import com.example.ui.theme.*
 import java.text.NumberFormat
 import java.util.Locale
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun SettingsScreen(viewModel: TallyViewModel) {
@@ -125,6 +127,66 @@ fun SettingsScreen(viewModel: TallyViewModel) {
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.padding(top = 8.dp)
                 )
+            }
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, AntiqueCream),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+
+            val inventoryExportLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("text/csv")
+            ) { uri ->
+                uri?.let { viewModel.exportInventory(context, it) }
+            }
+
+            val transactionExportLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.CreateDocument("text/csv")
+            ) { uri ->
+                uri?.let { viewModel.exportTransactions(context, it) }
+            }
+
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Data Management", style = MaterialTheme.typography.labelMedium, color = CardinalRed)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { inventoryExportLauncher.launch("inventory_export.csv") },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = "Export Inventory")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Export Inventory to CSV")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = { transactionExportLauncher.launch("transactions_export.csv") },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Share, contentDescription = "Export Transactions")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Export Transactions to CSV")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(
+                    onClick = { viewModel.triggerManualBackup(context) },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary, contentColor = MaterialTheme.colorScheme.onSecondary),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Lock, contentDescription = "Manual Backup")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Trigger Database Backup")
+                }
             }
         }
     }
