@@ -706,9 +706,13 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         return try {
             val context = getApplication<Application>()
             val uri = Uri.parse(uriStr)
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val fileBytes = inputStream?.readBytes() ?: return uriStr
-            inputStream.close()
+
+            val fileBytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+                bytes
+            } ?: return uriStr
 
             val mediaType = (context.contentResolver.getType(uri) ?: "image/*").toMediaTypeOrNull()
             val requestFile = fileBytes.toRequestBody(mediaType)
@@ -745,7 +749,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         _selectedTypeFilter.value = type
     }
 
-    fun exportInventory(context: android.content.Context, uri: android.net.Uri) {
+    fun exportInventory(context: android.content.Context, uri: Uri) {
         viewModelScope.launch {
             val items = repository.allSareeItems.firstOrNull() ?: emptyList()
             val result = com.example.utils.CSVExportUtils.exportInventoryToUri(context, items, uri)
@@ -757,7 +761,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun exportTransactions(context: android.content.Context, uri: android.net.Uri) {
+    fun exportTransactions(context: android.content.Context, uri: Uri) {
         viewModelScope.launch {
             val logs = repository.allTransactionLogs.firstOrNull() ?: emptyList()
             val result = com.example.utils.CSVExportUtils.exportTransactionsToUri(context, logs, uri)

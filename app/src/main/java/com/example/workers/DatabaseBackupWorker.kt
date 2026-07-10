@@ -1,10 +1,13 @@
 package com.example.workers
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -36,7 +39,7 @@ class DatabaseBackupWorker(
             // Other apps cannot access this without root, ensuring backup security.
             val backupDir = File(
                 applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS),
-                "RakibTallyBackups_Secure"
+                "Rakib_Tally_Backups_Secure"
             )
 
             if (!backupDir.exists()) {
@@ -91,6 +94,17 @@ class DatabaseBackupWorker(
             .setSmallIcon(android.R.drawable.ic_menu_save)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // Cannot post notifications if permission is not granted
+                return
+            }
+        }
 
         notificationManager.notify(System.currentTimeMillis().toInt(), notification)
     }

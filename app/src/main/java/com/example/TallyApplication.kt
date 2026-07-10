@@ -24,7 +24,7 @@ class TallyApplication : Application() {
         super.onCreate()
         instance = this
 
-        val MIGRATION_6_7 = object : Migration(6, 7) {
+        val migration6to7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE saree_inventory ADD COLUMN local_image_url TEXT")
                 db.execSQL("ALTER TABLE stock_production ADD COLUMN local_image_url TEXT")
@@ -36,7 +36,7 @@ class TallyApplication : Application() {
             TallyDatabase::class.java,
             "tally_khata_database"
         )
-            .addMigrations(MIGRATION_6_7)
+            .addMigrations(migration6to7)
             // 3. Database Migration Strategy:
             // Destructive migration is removed for production to ensure no data loss occurs
             // if a migration is missed. All future schema changes MUST be handled via addMigrations().
