@@ -45,7 +45,7 @@ class TallyApplication : Application() {
             "tally_khata_database"
         )
             .addMigrations(migration6to7)
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(true)
             // 3. Database Migration Strategy:
             // Destructive migration is removed for production to ensure no data loss occurs
             // if a migration is missed. All future schema changes MUST be handled via addMigrations().

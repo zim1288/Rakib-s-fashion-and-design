@@ -264,7 +264,8 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                     .fillMaxWidth()
                     .weight(1f)
                     .testTag("production_list"),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 88.dp)
             ) {
                 itemsIndexed(items) { index, item ->
                     val isCompleted = item.status == "Completed"

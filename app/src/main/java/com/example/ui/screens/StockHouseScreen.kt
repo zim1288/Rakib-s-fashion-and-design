@@ -192,7 +192,8 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                         .fillMaxWidth()
                         .weight(1f)
                         .testTag("stock_list"),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(bottom = 88.dp)
                 ) {
                     itemsIndexed(filteredList) { index, item ->
                         val isLowStock = item.pieceCount < lowStockThreshold
