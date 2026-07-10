@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import kotlinx.coroutines.delay
+import com.example.TallyApplication
 
 class BackgroundSyncWorker(
     appContext: Context,
@@ -15,8 +15,8 @@ class BackgroundSyncWorker(
         return try {
             Log.d("BackgroundSyncWorker", "Starting background sync...")
 
-            // Simulate network call / sync with remote server
-            delay(2000)
+            // Sync with remote server (MongoDB) via API
+            TallyApplication.instance.repository.syncOfflineData()
 
             Log.d("BackgroundSyncWorker", "Background sync completed successfully.")
             Result.success()

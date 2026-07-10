@@ -155,9 +155,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
                         NetworkProductionItem(
                             id = item.id,
                             modelName = item.modelName,
-                        sku = item.sku,
-                        color = item.color,
-                        fabricType = item.fabricType,
+                            sku = item.sku,
+                            color = item.color,
+                            fabricType = item.fabricType,
                             quantity = item.quantity,
                             estimatedCompletionDate = item.estimatedCompletionDate,
                             status = item.status,
@@ -232,16 +232,16 @@ class TallyRepository(private val tallyDao: TallyDao) {
                 NetworkProductionItem(
                     id = it.id,
                     modelName = it.modelName,
-                        sku = it.sku,
-                        color = it.color,
-                        fabricType = it.fabricType,
+                    sku = it.sku,
+                    color = it.color,
+                    fabricType = it.fabricType,
                     quantity = it.quantity,
                     estimatedCompletionDate = it.estimatedCompletionDate,
                     status = it.status,
                     imageUrl = it.imageUrl
                 )
             })
-            
+
             // Push local transactions one-by-one to server to ensure offline transactions are synced
             localTransactions.forEach { log ->
                 try {

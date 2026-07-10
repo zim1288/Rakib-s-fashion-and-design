@@ -100,13 +100,22 @@ interface SareeApiService {
 
     @POST("auth/register")
     suspend fun registerUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
-    
+
     @POST("auth/login")
     suspend fun loginUserOnServer(@Body request: NetworkUserAuthRequest): Response<Unit>
 
     @POST("auth/check")
     suspend fun checkUserOnServer(@Body request: NetworkEmailRequest): Response<Unit>
+
+    @Multipart
+    @POST("upload")
+    suspend fun uploadImage(@Part image: okhttp3.MultipartBody.Part): Response<UploadResponse>
 }
+
+@JsonClass(generateAdapter = true)
+data class UploadResponse(
+    val imageUrl: String
+)
 
 object SareeApi {
     private const val TAG = "SareeApi"
@@ -190,15 +199,20 @@ object SareeApi {
                 Log.d(TAG, "Mock MongoDB: Registered user ${request.email} successfully.")
                 return Response.success(Unit)
             }
-            
+
             override suspend fun loginUserOnServer(request: NetworkUserAuthRequest): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Logged in user ${request.email} successfully.")
                 return Response.success(Unit)
             }
-            
+
             override suspend fun checkUserOnServer(request: NetworkEmailRequest): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Checked user ${request.email} successfully.")
                 return Response.success(Unit)
+            }
+
+            override suspend fun uploadImage(image: okhttp3.MultipartBody.Part): Response<UploadResponse> {
+                Log.d(TAG, "Mock MongoDB: Uploaded image successfully.")
+                return Response.success(UploadResponse("https://res.cloudinary.com/demo/image/upload/sample.jpg"))
             }
         }
     }

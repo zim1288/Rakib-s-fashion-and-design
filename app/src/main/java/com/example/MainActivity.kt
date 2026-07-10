@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
     setContent {
       val isDarkMode by viewModel.isDarkMode.collectAsState()
       val useDarkTheme = isDarkMode ?: isSystemInDarkTheme()
-      
+
       MyApplicationTheme(darkTheme = useDarkTheme) {
         TallyAppUi(viewModel = viewModel)
       }

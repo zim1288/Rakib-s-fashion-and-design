@@ -145,9 +145,9 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = fabricFilter,
@@ -169,8 +169,8 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
 
             val filteredList = sarees.filter { it.brandCategory == selectedBrand }.filter {
                 (searchQuery.isBlank() || it.modelName.contains(searchQuery, ignoreCase = true) || it.sku.contains(searchQuery, ignoreCase = true)) &&
-                (fabricFilter == "All Fabrics" || fabricFilter.isBlank() || it.fabricType.contains(fabricFilter, ignoreCase = true)) &&
-                (colorFilter == "All Colors" || colorFilter.isBlank() || it.color.contains(colorFilter, ignoreCase = true))
+                        (fabricFilter == "All Fabrics" || fabricFilter.isBlank() || it.fabricType.contains(fabricFilter, ignoreCase = true)) &&
+                        (colorFilter == "All Colors" || colorFilter.isBlank() || it.color.contains(colorFilter, ignoreCase = true))
             }
 
             if (filteredList.isEmpty()) {
@@ -214,9 +214,9 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                if (!item.imageUrl.isNullOrBlank()) {
+                                if (!item.localImageUrl.isNullOrBlank() || !item.imageUrl.isNullOrBlank()) {
                                     AsyncImage(
-                                        model = item.imageUrl,
+                                        model = item.localImageUrl ?: item.imageUrl,
                                         contentDescription = "Saree Image",
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
@@ -322,7 +322,7 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
             itemToEdit = null
         }
     }
-    
+
     if (isAdjustingThreshold) {
         Dialog(onDismissRequest = { isAdjustingThreshold = false }) {
             Card(
@@ -390,16 +390,16 @@ fun EditItemDialog(
     val context = LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { 
+        uri?.let {
             val savedUri = ImageHelper.copyUriToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrl = savedUri
             }
         }
     }
-    
+
     val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let { 
+        bitmap?.let {
             val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrl = savedUri
@@ -507,15 +507,32 @@ fun EditItemDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (!imageUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = imageUrl,
-                            contentDescription = "Selected Image",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(60.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.LightGray.copy(alpha = 0.3f))
-                        )
+                        Box {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = "Selected Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color.LightGray.copy(alpha = 0.3f))
+                            )
+                            IconButton(
+                                onClick = { imageUrl = null },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(50))
+                                    .padding(2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove Image",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.width(12.dp))
                     }
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {

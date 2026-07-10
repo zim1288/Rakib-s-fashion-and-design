@@ -26,8 +26,8 @@ class TallyApplication : Application() {
 
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // If you add a new column in version 7, you would run:
-                // db.execSQL("ALTER TABLE saree_inventory ADD COLUMN new_column_name TEXT DEFAULT '' NOT NULL")
+                db.execSQL("ALTER TABLE saree_inventory ADD COLUMN local_image_url TEXT")
+                db.execSQL("ALTER TABLE stock_production ADD COLUMN local_image_url TEXT")
             }
         }
 

@@ -59,7 +59,7 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
     var newColor by remember { mutableStateOf("") }
     var newFabricType by remember { mutableStateOf("") }
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
-    
+
     val context = androidx.compose.ui.platform.LocalContext.current
 
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
@@ -70,9 +70,9 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
             }
         }
     }
-    
+
     val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let { 
+        bitmap?.let {
             val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrlInput = savedUri
@@ -178,15 +178,32 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (!imageUrlInput.isNullOrBlank()) {
-                            AsyncImage(
-                                model = imageUrlInput,
-                                contentDescription = "Selected Image",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.LightGray.copy(alpha = 0.3f))
-                            )
+                            Box {
+                                AsyncImage(
+                                    model = imageUrlInput,
+                                    contentDescription = "Selected Image",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.LightGray.copy(alpha = 0.3f))
+                                )
+                                IconButton(
+                                    onClick = { imageUrlInput = null },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(50))
+                                        .padding(2.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove Image",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.width(12.dp))
                         }
                         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -276,9 +293,9 @@ fun StockProductionScreen(viewModel: TallyViewModel) {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            if (!item.imageUrl.isNullOrBlank()) {
+                            if (!item.localImageUrl.isNullOrBlank() || !item.imageUrl.isNullOrBlank()) {
                                 AsyncImage(
-                                    model = item.imageUrl,
+                                    model = item.localImageUrl ?: item.imageUrl,
                                     contentDescription = "Production Image",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier

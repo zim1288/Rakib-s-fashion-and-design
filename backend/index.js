@@ -2,10 +2,30 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Cloudinary Configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'tally-app',
+    allowedFormats: ['jpg', 'png', 'jpeg', 'webp'],
+  },
+});
+
+const upload = multer({ storage: storage });
 
 // Check environment variables first
 if (!process.env.MONGODB_URI) {
@@ -24,6 +44,18 @@ mongoose.connect(process.env.MONGODB_URI, { dbName: 'Silk_and_fashion' })
 // Health check route for testing backend status
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+});
+
+// --- Upload Route ---
+app.post('/v1/upload', upload.single('image'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No image provided' });
+        }
+        res.json({ imageUrl: req.file.path });
+    } catch (err) {
+        res.status(500).json({ error: 'Error uploading to Cloudinary: ' + err.message });
+    }
 });
 
 // Define Schemas for the requested structure
@@ -130,15 +162,6 @@ app.post('/v1/production', async (req, res) => {
             }
         }));
         if (bulkOps.length > 0) await UserLog.bulkWrite(bulkOps);
-        res.status(200).send();
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/v1/production/item/:id', async (req, res) => {
-    try {
-        await UserLog.findOneAndDelete({ id: parseInt(req.params.id), dataType: 'production' });
         res.status(200).send();
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -278,7 +301,7 @@ app.post('/v1/auth/send-verification', async (req, res) => {
 });
 
 // Start the Server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.BACKEND_PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });

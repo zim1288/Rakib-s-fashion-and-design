@@ -13,6 +13,10 @@ import kotlinx.coroutines.launch
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import android.net.Uri
 
 fun hashPassword(password: String): String {
     val bytes = password.toByteArray()
@@ -508,6 +512,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             val dateStr = formatter.format(Date())
 
             for (cartItem in itemsToCommit) {
+                val finalImageUrl = uploadImageIfLocal(cartItem.imageUrl)
+                val isLocal = cartItem.imageUrl?.startsWith("http") == false && cartItem.imageUrl.isNotBlank()
+
                 // Check if item exists in present house inventory
                 val existing = sareeItems.value.firstOrNull {
                     it.modelName.equals(cartItem.modelName, ignoreCase = true) &&
@@ -519,7 +526,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     val updated = existing.copy(
                         pieceCount = existing.pieceCount + cartItem.quantity,
                         unitPrice = cartItem.unitCost, // Update to latest purchase cost/price indicator
-                        imageUrl = cartItem.imageUrl ?: existing.imageUrl,
+                        imageUrl = finalImageUrl ?: existing.imageUrl,
+                        localImageUrl = if (isLocal) cartItem.imageUrl else existing.localImageUrl,
                         sku = cartItem.sku.ifBlank { existing.sku },
                         color = cartItem.color.ifBlank { existing.color },
                         fabricType = cartItem.fabricType.ifBlank { existing.fabricType }
@@ -532,7 +540,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                         brandCategory = cartItem.brandCategory,
                         unitPrice = cartItem.unitCost,
                         pieceCount = cartItem.quantity,
-                        imageUrl = cartItem.imageUrl,
+                        imageUrl = finalImageUrl,
+                        localImageUrl = if (isLocal) cartItem.imageUrl else null,
                         sku = cartItem.sku,
                         color = cartItem.color,
                         fabricType = cartItem.fabricType
@@ -647,12 +656,15 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     fun addNewProductionItem(modelName: String, qty: Int, completionDate: String, imageUrl: String? = null, sku: String = "", color: String = "", fabricType: String = "") {
         if (modelName.isBlank() || qty <= 0 || completionDate.isBlank()) return
         viewModelScope.launch {
+            val finalImageUrl = uploadImageIfLocal(imageUrl)
+            val isLocal = imageUrl?.startsWith("http") == false && imageUrl.isNotBlank()
             val item = ProductionItem(
                 modelName = modelName.trim(),
                 quantity = qty,
                 estimatedCompletionDate = completionDate.trim(),
                 status = "In Progress",
-                imageUrl = imageUrl,
+                imageUrl = finalImageUrl,
+                localImageUrl = if (isLocal) imageUrl else null,
                 sku = sku,
                 color = color,
                 fabricType = fabricType
@@ -669,17 +681,48 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateStockItemDetails(id: Int, name: String, sku: String, color: String, fabricType: String, category: String, price: Double, count: Int, imageUrl: String? = null) {
         viewModelScope.launch {
+            val finalUploadedUrl = uploadImageIfLocal(imageUrl)
             val existing = sareeItems.value.firstOrNull { it.id == id }
-            val finalImageUrl = if (imageUrl.isNullOrBlank()) existing?.imageUrl else imageUrl
+            val finalImageUrl = if (finalUploadedUrl.isNullOrBlank()) existing?.imageUrl else finalUploadedUrl
+            val isLocal = imageUrl?.startsWith("http") == false && imageUrl.isNotBlank()
+
             val updated = SareeItem( sku = sku, color = color, fabricType = fabricType,
                 id = id,
                 modelName = name,
                 brandCategory = category,
                 unitPrice = price,
                 pieceCount = count,
-                imageUrl = finalImageUrl
+                imageUrl = finalImageUrl,
+                localImageUrl = if (isLocal) imageUrl else existing?.localImageUrl
             )
             repository.updateSareeItem(updated)
+        }
+    }
+
+    private suspend fun uploadImageIfLocal(uriStr: String?): String? {
+        if (uriStr.isNullOrBlank() || uriStr.startsWith("http")) {
+            return uriStr
+        }
+        return try {
+            val context = getApplication<Application>()
+            val uri = Uri.parse(uriStr)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val fileBytes = inputStream?.readBytes() ?: return uriStr
+            inputStream.close()
+
+            val mediaType = (context.contentResolver.getType(uri) ?: "image/*").toMediaTypeOrNull()
+            val requestFile = fileBytes.toRequestBody(mediaType)
+            val body = MultipartBody.Part.createFormData("image", "upload.jpg", requestFile)
+
+            val response = SareeApi.service.uploadImage(body)
+            if (response.isSuccessful) {
+                response.body()?.imageUrl ?: uriStr
+            } else {
+                uriStr
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            uriStr
         }
     }
 

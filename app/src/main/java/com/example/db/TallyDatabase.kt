@@ -13,7 +13,8 @@ data class SareeItem(
     @ColumnInfo(name = "brand_category") val brandCategory: String, // "Rakib Fashion" or "Rakib Silk"
     @ColumnInfo(name = "unit_price") val unitPrice: Double,
     @ColumnInfo(name = "piece_count") val pieceCount: Int,
-    @ColumnInfo(name = "image_url") val imageUrl: String? = null
+    @ColumnInfo(name = "image_url") val imageUrl: String? = null,
+    @ColumnInfo(name = "local_image_url") val localImageUrl: String? = null
 ) {
     val totalValue: Double get() = unitPrice * pieceCount
 }
@@ -28,7 +29,8 @@ data class ProductionItem(
     @ColumnInfo(name = "quantity") val quantity: Int,
     @ColumnInfo(name = "estimated_completion_date") val estimatedCompletionDate: String,
     @ColumnInfo(name = "status") val status: String, // "In Progress" or "Completed"
-    @ColumnInfo(name = "image_url") val imageUrl: String? = null
+    @ColumnInfo(name = "image_url") val imageUrl: String? = null,
+    @ColumnInfo(name = "local_image_url") val localImageUrl: String? = null
 )
 
 @Entity(tableName = "transaction_logs")
@@ -118,7 +120,7 @@ interface TallyDao {
     suspend fun insertUserAccount(user: UserAccount): Long
 }
 
-@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 6, exportSchema = false)
+@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 7, exportSchema = false)
 abstract class TallyDatabase : RoomDatabase() {
     abstract fun tallyDao(): TallyDao
 }
