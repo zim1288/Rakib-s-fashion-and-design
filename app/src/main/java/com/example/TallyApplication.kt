@@ -26,8 +26,16 @@ class TallyApplication : Application() {
 
         val migration6to7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE saree_inventory ADD COLUMN local_image_url TEXT")
-                db.execSQL("ALTER TABLE stock_production ADD COLUMN local_image_url TEXT")
+                try {
+                    db.execSQL("ALTER TABLE saree_inventory ADD COLUMN local_image_url TEXT")
+                } catch (e: Exception) {
+                    // Ignore if column already exists
+                }
+                try {
+                    db.execSQL("ALTER TABLE stock_production ADD COLUMN local_image_url TEXT")
+                } catch (e: Exception) {
+                    // Ignore if column already exists
+                }
             }
         }
 
@@ -37,6 +45,7 @@ class TallyApplication : Application() {
             "tally_khata_database"
         )
             .addMigrations(migration6to7)
+            .fallbackToDestructiveMigration()
             // 3. Database Migration Strategy:
             // Destructive migration is removed for production to ensure no data loss occurs
             // if a migration is missed. All future schema changes MUST be handled via addMigrations().
