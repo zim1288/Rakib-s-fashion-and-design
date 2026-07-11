@@ -62,6 +62,11 @@ data class NetworkEmailRequest(
 )
 
 @JsonClass(generateAdapter = true)
+data class NetworkImageUrl(
+    val imageUrl: String
+)
+
+@JsonClass(generateAdapter = true)
 data class NetworkUserAuthRequest(
     val email: String,
     val password: String
@@ -110,6 +115,9 @@ interface SareeApiService {
     @Multipart
     @POST("upload")
     suspend fun uploadImage(@Part image: okhttp3.MultipartBody.Part): Response<UploadResponse>
+
+    @POST("delete-image")
+    suspend fun deleteImageOnServer(@Body request: NetworkImageUrl): Response<Unit>
 }
 
 @JsonClass(generateAdapter = true)
@@ -213,6 +221,11 @@ object SareeApi {
             override suspend fun uploadImage(image: okhttp3.MultipartBody.Part): Response<UploadResponse> {
                 Log.d(TAG, "Mock MongoDB: Uploaded image successfully.")
                 return Response.success(UploadResponse("https://res.cloudinary.com/demo/image/upload/sample.jpg"))
+            }
+
+            override suspend fun deleteImageOnServer(request: NetworkImageUrl): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Deleted image ${request.imageUrl} successfully.")
+                return Response.success(Unit)
             }
         }
     }

@@ -676,6 +676,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteProductionItem(item: ProductionItem) {
         viewModelScope.launch {
             repository.deleteProductionItem(item)
+            deleteImageFromCloudinary(item.imageUrl)
         }
     }
 
@@ -683,8 +684,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val finalUploadedUrl = uploadImageIfLocal(imageUrl)
             val existing = sareeItems.value.firstOrNull { it.id == id }
-            val finalImageUrl = if (finalUploadedUrl.isNullOrBlank()) existing?.imageUrl else finalUploadedUrl
+            val finalImageUrl = if (imageUrl.isNullOrBlank()) null else if (finalUploadedUrl.isNullOrBlank()) existing?.imageUrl else finalUploadedUrl
             val isLocal = imageUrl?.startsWith("http") == false && imageUrl.isNotBlank()
+
+            if (existing?.imageUrl != null && existing.imageUrl != finalImageUrl) {
+                deleteImageFromCloudinary(existing.imageUrl)
+            }
 
             val updated = SareeItem( sku = sku, color = color, fabricType = fabricType,
                 id = id,
@@ -693,9 +698,21 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 unitPrice = price,
                 pieceCount = count,
                 imageUrl = finalImageUrl,
-                localImageUrl = if (isLocal) imageUrl else existing?.localImageUrl
+                localImageUrl = if (imageUrl.isNullOrBlank()) null else if (isLocal) imageUrl else existing?.localImageUrl
             )
             repository.updateSareeItem(updated)
+        }
+    }
+
+    private fun deleteImageFromCloudinary(imageUrl: String?) {
+        if (imageUrl != null && imageUrl.contains("res.cloudinary.com")) {
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    SareeApi.service.deleteImageOnServer(com.example.api.NetworkImageUrl(imageUrl))
+                } catch (e: Exception) {
+                    android.util.Log.e("TallyViewModel", "Failed to delete image: $imageUrl", e)
+                }
+            }
         }
     }
 
@@ -733,6 +750,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteStockItem(item: SareeItem) {
         viewModelScope.launch {
             repository.deleteSareeItem(item)
+            deleteImageFromCloudinary(item.imageUrl)
         }
     }
 

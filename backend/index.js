@@ -58,6 +58,25 @@ app.post('/v1/upload', upload.single('image'), (req, res) => {
     }
 });
 
+// --- Delete Image Route ---
+app.post('/v1/delete-image', async (req, res) => {
+    try {
+        const { imageUrl } = req.body;
+        if (!imageUrl) return res.status(400).json({ error: 'No image URL provided' });
+
+        const parts = imageUrl.split('/');
+        const folderIndex = parts.indexOf('tally-app');
+        if (folderIndex !== -1) {
+            const publicIdWithExt = parts.slice(folderIndex).join('/');
+            const publicId = publicIdWithExt.substring(0, publicIdWithExt.lastIndexOf('.'));
+            await cloudinary.uploader.destroy(publicId);
+        }
+        res.status(200).send();
+    } catch (err) {
+        res.status(500).json({ error: 'Error deleting from Cloudinary: ' + err.message });
+    }
+});
+
 // Define Schemas for the requested structure
 const UserSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
