@@ -85,10 +85,10 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
 
     var debugRecoveryOtp by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(forgotEmail, isRecoveryOtpSent) {
-        if (isRecoveryOtpSent) {
-            debugRecoveryOtp = viewModel.getVerificationCodeForDebug(forgotEmail)
+        debugRecoveryOtp = if (isRecoveryOtpSent) {
+            viewModel.getVerificationCodeForDebug(forgotEmail)
         } else {
-            debugRecoveryOtp = null
+            null
         }
     }
 
@@ -529,24 +529,7 @@ fun LoginScreen(viewModel: TallyViewModel, authState: AuthState) {
                                         onOtpChange = { recoveryOtpText = it },
                                         modifier = Modifier.testTag("forgot_otp_input")
                                     )
-                                    if (debugRecoveryOtp != null) {
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        Card(
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                            ),
-                                            modifier = Modifier.fillMaxWidth(),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Text(
-                                                text = "Testing Helper (Local DB): OTP is $debugRecoveryOtp",
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                                modifier = Modifier.padding(10.dp),
-                                                textAlign = TextAlign.Center
-                                            )
-                                        }
-                                    }
+
                                     Spacer(modifier = Modifier.height(14.dp))
                                     Button(
                                         onClick = {
@@ -684,7 +667,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
 
     LaunchedEffect(key1 = secondsRemaining) {
         if (secondsRemaining > 0) {
-            kotlinx.coroutines.delay(1000)
+            kotlinx.coroutines.delay(kotlin.time.Duration.parse("PT1S"))
             secondsRemaining -= 1
         }
     }
@@ -783,24 +766,7 @@ fun EmailVerificationLayout(viewModel: TallyViewModel, email: String) {
                         modifier = Modifier.testTag("verification_code_input")
                     )
 
-                    if (debugOtp != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                            ),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = "Testing Helper (Local DB): OTP is $debugOtp",
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                modifier = Modifier.padding(10.dp),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
+
 
                     statusMessage?.let { (isSuccess, message) ->
                         Spacer(modifier = Modifier.height(10.dp))
