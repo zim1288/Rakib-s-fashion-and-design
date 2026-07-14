@@ -16,6 +16,7 @@ import java.util.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import androidx.core.net.toUri
 import android.net.Uri
 
 fun hashPassword(password: String): String {
@@ -58,6 +59,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _currentUserEmail = MutableStateFlow("")
     val currentUserEmail = _currentUserEmail.asStateFlow()
+
+    private val _isExporting = MutableStateFlow(false)
+    val isExporting = _isExporting.asStateFlow()
 
     // Screen navigation tracking
     private val _currentScreen = MutableStateFlow("DASHBOARD") // DASHBOARD, STOCK_HOUSE, STOCK_PRODUCTION, PURCHASE, SELL, HISTORY, SETTINGS
@@ -509,7 +513,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
             val dateStr = formatter.format(Date())
+            val timeStr = timeFormatter.format(Date())
 
             for (cartItem in itemsToCommit) {
                 val finalImageUrl = uploadImageIfLocal(cartItem.imageUrl)
@@ -557,7 +563,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                     quantity = cartItem.quantity,
                     unitPrice = cartItem.unitCost,
                     totalAmount = totalCost,
-                    dateString = dateStr
+                    dateString = dateStr,
+                    timeString = timeStr
                 )
                 repository.insertTransactionLog(expenseLog)
             }
@@ -565,11 +572,12 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // SALES LOGGING (Optimistic UI Update)
-    fun logClientSale(sareeItem: SareeItem, quantityToSell: Int, salePricePerPiece: Double, onError: (String) -> Unit, onSuccess: () -> Unit) {
+    fun logClientSale(sareeItem: SareeItem, quantityToSell: Int, salePricePerPiece: Double, customerName: String, customerNumber: String, onError: (String) -> Unit, onSuccess: () -> Unit) {
         if (quantityToSell <= 0 || salePricePerPiece <= 0) {
             onError("Please enter valid positive numbers")
             return
         }
+
         if (quantityToSell > sareeItem.pieceCount) {
             onError("Insufficient Stock In House! Only ${sareeItem.pieceCount} pieces available.")
             return
@@ -582,7 +590,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
             // Log Sale transaction
             val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
             val dateStr = formatter.format(Date())
+            val timeStr = timeFormatter.format(Date())
+
             val totalSalesValue = salePricePerPiece * quantityToSell
             val saleLog = TransactionLog(
                 type = "SALE",
@@ -590,7 +601,10 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 quantity = quantityToSell,
                 unitPrice = salePricePerPiece,
                 totalAmount = totalSalesValue,
-                dateString = dateStr
+                customerName = customerName,
+                customerNumber = customerNumber,
+                dateString = dateStr,
+                timeString = timeStr
             )
             repository.insertTransactionLog(saleLog)
             onSuccess()
@@ -638,7 +652,9 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
                 // Add log for production completion stock upgrade
                 val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                val timeFormatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
                 val dateStr = formatter.format(Date())
+                val timeStr = timeFormatter.format(Date())
                 repository.insertTransactionLog(
                     TransactionLog(
                         type = "PRODUCTION_FINISHED",
@@ -646,7 +662,8 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                         quantity = item.quantity,
                         unitPrice = 0.0,
                         totalAmount = 0.0,
-                        dateString = dateStr
+                        dateString = dateStr,
+                        timeString = timeStr
                     )
                 )
             }
@@ -722,7 +739,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
         }
         return try {
             val context = getApplication<Application>()
-            val uri = Uri.parse(uriStr)
+            val uri = uriStr.toUri()
 
             val fileBytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 val inputStream = context.contentResolver.openInputStream(uri)
@@ -769,6 +786,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     fun exportInventory(context: android.content.Context, uri: Uri) {
         viewModelScope.launch {
+            _isExporting.value = true
             val items = repository.allSareeItems.firstOrNull() ?: emptyList()
             val result = com.example.utils.CSVExportUtils.exportInventoryToUri(context, items, uri)
             if (result.isSuccess) {
@@ -776,18 +794,77 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             } else {
                 android.widget.Toast.makeText(context, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
             }
+            _isExporting.value = false
         }
     }
 
-    fun exportTransactions(context: android.content.Context, uri: Uri) {
+    fun exportTransactions(context: android.content.Context, uri: Uri, startTimestamp: Long? = null, endTimestamp: Long? = null, exportType: String = "ALL") {
         viewModelScope.launch {
-            val logs = repository.allTransactionLogs.firstOrNull() ?: emptyList()
+            _isExporting.value = true
+            var logs = repository.allTransactionLogs.firstOrNull() ?: emptyList()
+            if (startTimestamp != null && endTimestamp != null) {
+                logs = logs.filter { it.timestamp in startTimestamp..endTimestamp }
+            }
+            if (exportType != "ALL") {
+                val dbType = when(exportType) {
+                    "SALE" -> "SALE"
+                    "PURCHASE" -> "EXPENSE"
+                    "PRODUCTION" -> "PRODUCTION_FINISHED"
+                    else -> "ALL"
+                }
+                if (dbType != "ALL") {
+                    logs = logs.filter { it.type == dbType }
+                }
+            }
             val result = com.example.utils.CSVExportUtils.exportTransactionsToUri(context, logs, uri)
             if (result.isSuccess) {
                 android.widget.Toast.makeText(context, "Exported successfully", android.widget.Toast.LENGTH_LONG).show()
             } else {
                 android.widget.Toast.makeText(context, "Export failed", android.widget.Toast.LENGTH_SHORT).show()
             }
+            _isExporting.value = false
+        }
+    }
+
+    fun exportInventoryPdf(context: android.content.Context, uri: Uri) {
+        viewModelScope.launch {
+            _isExporting.value = true
+            val items = repository.allSareeItems.firstOrNull() ?: emptyList()
+            val result = com.example.utils.PdfExportUtils.exportInventoryToPdfUri(context, items, uri)
+            if (result.isSuccess) {
+                android.widget.Toast.makeText(context, "PDF Exported successfully", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                android.widget.Toast.makeText(context, "PDF Export failed", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            _isExporting.value = false
+        }
+    }
+
+    fun exportTransactionsPdf(context: android.content.Context, uri: Uri, startTimestamp: Long? = null, endTimestamp: Long? = null, exportType: String = "ALL") {
+        viewModelScope.launch {
+            _isExporting.value = true
+            var logs = repository.allTransactionLogs.firstOrNull() ?: emptyList()
+            if (startTimestamp != null && endTimestamp != null) {
+                logs = logs.filter { it.timestamp in startTimestamp..endTimestamp }
+            }
+            if (exportType != "ALL") {
+                val dbType = when(exportType) {
+                    "SALE" -> "SALE"
+                    "PURCHASE" -> "EXPENSE"
+                    "PRODUCTION" -> "PRODUCTION_FINISHED"
+                    else -> "ALL"
+                }
+                if (dbType != "ALL") {
+                    logs = logs.filter { it.type == dbType }
+                }
+            }
+            val result = com.example.utils.PdfExportUtils.exportTransactionsToPdfUri(context, logs, uri)
+            if (result.isSuccess) {
+                android.widget.Toast.makeText(context, "PDF Exported successfully", android.widget.Toast.LENGTH_LONG).show()
+            } else {
+                android.widget.Toast.makeText(context, "PDF Export failed", android.widget.Toast.LENGTH_SHORT).show()
+            }
+            _isExporting.value = false
         }
     }
 

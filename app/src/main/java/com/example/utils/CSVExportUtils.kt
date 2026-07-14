@@ -15,6 +15,7 @@ object CSVExportUtils {
             try {
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     OutputStreamWriter(outputStream).use { writer ->
+                        writer.append("\uFEFF") // UTF-8 BOM for Excel compatibility
                         writer.append("Model Name,SKU,Color,Fabric Type,Brand Category,Unit Price,Quantity,Total Value\n")
                         for (item in items) {
                             writer.append("${escapeCSV(item.modelName)},${escapeCSV(item.sku)},${escapeCSV(item.color)},${escapeCSV(item.fabricType)},${escapeCSV(item.brandCategory)},${item.unitPrice},${item.pieceCount},${item.totalValue}\n")
@@ -34,6 +35,7 @@ object CSVExportUtils {
             try {
                 context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                     OutputStreamWriter(outputStream).use { writer ->
+                        writer.append("\uFEFF") // UTF-8 BOM for Excel compatibility
                         writer.append("Date,Type,Model Name,SKU,Color,Fabric Type,Quantity,Unit Price,Total Amount\n")
                         for (log in logs) {
                             writer.append("${log.dateString},${log.type},${escapeCSV(log.modelName)},${escapeCSV(log.sku)},${escapeCSV(log.color)},${escapeCSV(log.fabricType)},${log.quantity},${log.unitPrice},${log.totalAmount}\n")

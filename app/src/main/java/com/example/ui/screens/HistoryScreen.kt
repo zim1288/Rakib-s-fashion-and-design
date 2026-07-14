@@ -1,10 +1,12 @@
 package com.example.ui.screens
 
+import com.example.ui.theme.*
 import com.example.ui.TallyViewModel
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -96,8 +98,8 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                            .border(1.dp, WarmBeige, RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .clickable { monthExpanded = true }
                             .padding(12.dp)
                             .testTag("month_filter_trigger")
@@ -135,8 +137,8 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                            .border(1.dp, WarmBeige, RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .clickable { yearExpanded = true }
                             .padding(12.dp)
                             .testTag("year_filter_trigger")
@@ -178,8 +180,8 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        .border(1.dp, WarmBeige, RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .clickable { typeExpanded = true }
                         .padding(12.dp)
                         .testTag("type_filter_trigger")
@@ -295,14 +297,21 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = if (log.type == "EXPENSE") "EXPENSE" else if (log.type == "SALE") "RETAIL SALES" else "SYSTEM LOG",
                                         color = if (isIncome) Color(0xFF198754) else if (log.type == "EXPENSE") CardinalRed else Color.Blue,
                                         style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Text(log.dateString, style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                    Text("${log.dateString} ${log.timeString}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                }
+                                if (log.customerName.isNotBlank()) {
+                                    Text(
+                                        text = "Customer: ${log.customerName}",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                    )
                                 }
                             }
 

@@ -44,8 +44,11 @@ data class TransactionLog(
     @ColumnInfo(name = "quantity") val quantity: Int,
     @ColumnInfo(name = "unit_price") val unitPrice: Double,
     @ColumnInfo(name = "total_amount") val totalAmount: Double,
+    @ColumnInfo(name = "customer_name") val customerName: String = "",
+    @ColumnInfo(name = "customer_number") val customerNumber: String = "",
     @ColumnInfo(name = "timestamp") val timestamp: Long = System.currentTimeMillis(),
-    @ColumnInfo(name = "date_string") val dateString: String // e.g. "2026-06-19"
+    @ColumnInfo(name = "date_string") val dateString: String, // e.g. "2026-06-19"
+    @ColumnInfo(name = "time_string") val timeString: String = "" // e.g. "14:30:00"
 )
 
 @Entity(tableName = "user_accounts")
@@ -120,7 +123,7 @@ interface TallyDao {
     suspend fun insertUserAccount(user: UserAccount): Long
 }
 
-@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 7, exportSchema = false)
+@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 9, exportSchema = false)
 abstract class TallyDatabase : RoomDatabase() {
     abstract fun tallyDao(): TallyDao
 }

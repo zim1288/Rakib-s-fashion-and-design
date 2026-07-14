@@ -189,8 +189,10 @@ class TallyRepository(private val tallyDao: TallyDao) {
                         quantity = log.quantity,
                         unitPrice = log.unitPrice,
                         totalAmount = log.totalAmount,
+                        customerName = log.customerName,
                         timestamp = log.timestamp,
-                        dateString = log.dateString
+                        dateString = log.dateString,
+                        timeString = log.timeString
                     )
                 )
                 if (response.isSuccessful) {
@@ -256,8 +258,10 @@ class TallyRepository(private val tallyDao: TallyDao) {
                             quantity = log.quantity,
                             unitPrice = log.unitPrice,
                             totalAmount = log.totalAmount,
+                            customerName = log.customerName,
                             timestamp = log.timestamp,
-                            dateString = log.dateString
+                            dateString = log.dateString,
+                            timeString = log.timeString
                         )
                     )
                 } catch (e: Exception) {
@@ -323,8 +327,10 @@ class TallyRepository(private val tallyDao: TallyDao) {
                             quantity = netItem.quantity,
                             unitPrice = netItem.unitPrice,
                             totalAmount = netItem.totalAmount,
+                            customerName = netItem.customerName,
                             timestamp = netItem.timestamp,
-                            dateString = netItem.dateString
+                            dateString = netItem.dateString,
+                            timeString = netItem.timeString
                         )
                     )
                 }

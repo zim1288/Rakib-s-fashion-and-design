@@ -50,8 +50,10 @@ data class NetworkTransactionLog(
     val quantity: Int,
     val unitPrice: Double,
     val totalAmount: Double,
+    val customerName: String = "",
     val timestamp: Long,
     val dateString: String,
+    val timeString: String = "",
     val email: String? = null
 )
 

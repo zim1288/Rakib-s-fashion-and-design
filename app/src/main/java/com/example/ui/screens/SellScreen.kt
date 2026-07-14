@@ -45,6 +45,8 @@ fun SellScreen(viewModel: TallyViewModel) {
     var selectedItemIndex by remember { mutableIntStateOf(-1) }
     var qtyToSellStr by remember { mutableStateOf("") }
     var retailPriceStr by remember { mutableStateOf("") }
+    var customerNameStr by remember { mutableStateOf("") }
+    var customerNumberStr by remember { mutableStateOf("") }
 
     var feedbackMsg by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
@@ -219,6 +221,43 @@ fun SellScreen(viewModel: TallyViewModel) {
                         )
                     )
 
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = customerNameStr,
+                        onValueChange = { customerNameStr = it },
+                        label = { Text("Customer Name (Optional)") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("customer_name_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = customerNumberStr,
+                        onValueChange = { customerNumberStr = it },
+                        label = { Text("Customer Number (Optional)") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("customer_number_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    )
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     feedbackMsg?.let { errorMsg ->
@@ -244,11 +283,15 @@ fun SellScreen(viewModel: TallyViewModel) {
                                     sareeItem = selectedSaree,
                                     quantityToSell = pieces,
                                     salePricePerPiece = price,
+                                    customerName = customerNameStr,
+                                    customerNumber = customerNumberStr,
                                     onError = { feedbackMsg = it }
                                 ) {
                                     successMsg = "Sale Logged Instantly! Deducted $pieces from available stock."
                                     qtyToSellStr = ""
                                     retailPriceStr = ""
+                                    customerNameStr = ""
+                                    customerNumberStr = ""
                                     selectedItemIndex = -1
                                 }
                             } else {
