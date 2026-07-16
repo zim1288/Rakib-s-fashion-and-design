@@ -56,7 +56,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
     var colorInput by remember { mutableStateOf("") }
     var fabricTypeInput by remember { mutableStateOf("") }
     var imageUrlInput by remember { mutableStateOf<String?>(null) }
-
+    
     val context = androidx.compose.ui.platform.LocalContext.current
     val launcher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -66,9 +66,9 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
             }
         }
     }
-
+    
     val cameraLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let {
+        bitmap?.let { 
             val savedUri = ImageHelper.saveBitmapToInternalStorage(context, it)
             if (savedUri != null) {
                 imageUrlInput = savedUri
@@ -193,8 +193,8 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                                     ) {
                                         Icon(
                                             Icons.Default.Close,
-                                            contentDescription = "Remove Image",
-                                            tint = Color.White,
+                                             contentDescription = "Remove Image",
+                                             tint = Color.White,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -330,7 +330,7 @@ fun PurchaseScreen(viewModel: TallyViewModel) {
                     }
                 }
             }
-
+            
             item {
                 Spacer(modifier = Modifier.height(12.dp))
                 val cartTotal = cartList.sumOf { it.unitCost * it.quantity }

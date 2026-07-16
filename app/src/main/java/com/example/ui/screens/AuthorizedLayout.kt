@@ -65,6 +65,7 @@ fun AuthorizedLayout(viewModel: TallyViewModel, currentScreen: String, syncState
                 "PURCHASE" -> PurchaseScreen(viewModel)
                 "SELL" -> SellScreen(viewModel)
                 "HISTORY" -> HistoryScreen(viewModel)
+                "CUSTOMERS" -> CustomerDirectoryScreen(viewModel, onBack = { viewModel.navigateTo("DASHBOARD") })
                 "SETTINGS" -> SettingsScreen(viewModel)
             }
         }

@@ -91,12 +91,12 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Active Models", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
                             Text(
-                                sarees.size.toString(),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = SoftEggshell,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
-                            )
+                            sarees.size.toString(),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = SoftEggshell,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Total Weaving", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
@@ -153,55 +153,18 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                     borderColor2 = Color(0xFFEAC9BC),
                     contentColor2 = Color(0xFF3D2C26)
                 )
-
-                // 5th Pillar occupying full width at the bottom for balanced symmetry
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.navigateTo("HISTORY") }
-                        .testTag("pillar_history"),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    border = BorderStroke(1.dp, AntiqueCream),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(RoyalCrimson),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.List, contentDescription = "History", tint = SoftEggshell)
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Transaction History & Ledger Logs",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "Compile Sales, Expenses, monthly filter, and analytics live",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Enter", tint = RoyalCrimson)
-                    }
-                }
+                PillarNavigationRow(
+                    title1 = "Transaction History",
+                    desc1 = "Compile analytics live",
+                    icon1 = Icons.AutoMirrored.Filled.List,
+                    tag1 = "pillar_history",
+                    onClick1 = { viewModel.navigateTo("HISTORY") },
+                    title2 = "Customer Directory",
+                    desc2 = "Client profiles & logs",
+                    icon2 = Icons.Default.Person,
+                    tag2 = "pillar_customers",
+                    onClick2 = { viewModel.navigateTo("CUSTOMERS") }
+                )
             }
         }
     }

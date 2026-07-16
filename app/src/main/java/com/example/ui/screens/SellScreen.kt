@@ -47,10 +47,10 @@ fun SellScreen(viewModel: TallyViewModel) {
     var retailPriceStr by remember { mutableStateOf("") }
     var customerNameStr by remember { mutableStateOf("") }
     var customerNumberStr by remember { mutableStateOf("") }
-
+    
     var feedbackMsg by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
-
+    
     val focusManager = LocalFocusManager.current
 
     Column(
@@ -60,7 +60,7 @@ fun SellScreen(viewModel: TallyViewModel) {
     ) {
         Text("Record Retail Client Sale", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = RoyalCrimson)
         Text("Select an existing catalog saree in stock to subtract and log", style = MaterialTheme.typography.bodySmall)
-
+        
         Spacer(modifier = Modifier.height(16.dp))
 
         if (sarees.isEmpty()) {
@@ -76,7 +76,7 @@ fun SellScreen(viewModel: TallyViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Retail Saree Entry Selection:", style = MaterialTheme.typography.labelSmall)
-
+                    
                     // Simple Dropdown simulation
                     var expanded by remember { mutableStateOf(value = false) }
                     var searchDropdownQuery by remember { mutableStateOf("") }
@@ -134,52 +134,52 @@ fun SellScreen(viewModel: TallyViewModel) {
                                     singleLine = true
                                 )
                                 val filteredSarees = sarees.filter {
-                                    searchDropdownQuery.isBlank() ||
-                                            it.modelName.contains(searchDropdownQuery, ignoreCase = true) ||
-                                            it.sku.contains(searchDropdownQuery, ignoreCase = true)
+                                    searchDropdownQuery.isBlank() || 
+                                    it.modelName.contains(searchDropdownQuery, ignoreCase = true) || 
+                                    it.sku.contains(searchDropdownQuery, ignoreCase = true)
                                 }
                                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                                     items(filteredSarees.size) { i ->
                                         val item = filteredSarees[i]
                                         val idx = sarees.indexOf(item)
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    selectedItemIndex = idx
-                                                    retailPriceStr = item.unitPrice.toString() // Prepopulate
-                                                    expanded = false
-                                                }
-                                                .padding(12.dp)
-                                                .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
-                                        ) {
-                                            Column {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                selectedItemIndex = idx
+                                                retailPriceStr = item.unitPrice.toString() // Prepopulate
+                                                expanded = false
+                                            }
+                                            .padding(12.dp)
+                                            .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = item.modelName,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Row {
                                                 Text(
-                                                    text = item.modelName,
+                                                    text = item.brandCategory,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
+                                                    maxLines = 1
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Text(
+                                                    text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
+                                                    fontSize = 11.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
-                                                Row {
-                                                    Text(
-                                                        text = item.brandCategory,
-                                                        color = MaterialTheme.colorScheme.primary,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        maxLines = 1
-                                                    )
-                                                    Spacer(modifier = Modifier.width(12.dp))
-                                                    Text(
-                                                        text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
-                                                        fontSize = 11.sp,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                }
                                             }
                                         }
                                     }
                                 }
+                            }
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -201,9 +201,9 @@ fun SellScreen(viewModel: TallyViewModel) {
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     )
-
+                    
                     Spacer(modifier = Modifier.height(12.dp))
-
+                    
                     OutlinedTextField(
                         value = retailPriceStr,
                         onValueChange = { retailPriceStr = it },
@@ -263,7 +263,7 @@ fun SellScreen(viewModel: TallyViewModel) {
                     feedbackMsg?.let { errorMsg ->
                         Text(errorMsg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
                     }
-
+                    
                     successMsg?.let { successText ->
                         Text(successText, color = Color(0xFF0F5132), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
                     }
