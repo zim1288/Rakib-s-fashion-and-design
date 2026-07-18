@@ -306,21 +306,29 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text("${log.dateString} ${log.timeString}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                 }
-                                val customerInfo = buildString {
-                                    if (log.customerName.isNotBlank()) {
-                                        append(log.customerName)
+                                if (log.customerName.isNotBlank() || log.customerNumber.isNotBlank()) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (log.customerName.isNotBlank()) {
+                                            Text(
+                                                text = "Customer: ${log.customerName}",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
+                                            )
+                                        }
+                                        if (log.customerNumber.isNotBlank()) {
+                                            Text(
+                                                text = "No: ${log.customerNumber}",
+                                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                            )
+                                        }
                                     }
-                                    if (log.customerNumber.isNotBlank()) {
-                                        if (isNotEmpty()) append(" - ")
-                                        append(log.customerNumber)
-                                    }
-                                }
-                                if (customerInfo.isNotBlank()) {
-                                    Text(
-                                        text = "Customer: $customerInfo",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                    )
                                 }
                             }
 

@@ -91,12 +91,12 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Active Models", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
                             Text(
-                            sarees.size.toString(),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = SoftEggshell,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1
-                        )
+                                sarees.size.toString(),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = SoftEggshell,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
                         }
                         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
                             Text("Total Weaving", style = MaterialTheme.typography.bodySmall, color = SoftEggshell.copy(alpha = 0.6f), maxLines = 1)
@@ -154,16 +154,16 @@ fun DashboardScreen(viewModel: TallyViewModel) {
                     contentColor2 = Color(0xFF3D2C26)
                 )
                 PillarNavigationRow(
-                    title1 = "Transaction History",
-                    desc1 = "Compile analytics live",
-                    icon1 = Icons.AutoMirrored.Filled.List,
-                    tag1 = "pillar_history",
-                    onClick1 = { viewModel.navigateTo("HISTORY") },
-                    title2 = "Customer Directory",
-                    desc2 = "Client profiles & logs",
-                    icon2 = Icons.Default.Person,
-                    tag2 = "pillar_customers",
-                    onClick2 = { viewModel.navigateTo("CUSTOMERS") }
+                    title1 = "Customer Directory",
+                    desc1 = "Client profiles & logs",
+                    icon1 = Icons.Default.Person,
+                    tag1 = "pillar_customers",
+                    onClick1 = { viewModel.navigateTo("CUSTOMERS") },
+                    title2 = "Transaction History",
+                    desc2 = "Compile analytics live",
+                    icon2 = Icons.AutoMirrored.Filled.List,
+                    tag2 = "pillar_history",
+                    onClick2 = { viewModel.navigateTo("HISTORY") }
                 )
             }
         }

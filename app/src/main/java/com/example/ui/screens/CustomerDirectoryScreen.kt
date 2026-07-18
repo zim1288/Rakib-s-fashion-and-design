@@ -9,9 +9,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,7 +49,7 @@ fun CustomerDirectoryScreen(viewModel: TallyViewModel, onBack: () -> Unit) {
         return
     }
 
-    val customers = logs
+    val customers = logs.asSequence()
         .filter { it.type == "SALE" && (it.customerName.isNotBlank() || it.customerNumber.isNotBlank()) }
         .groupBy {
             if (it.customerNumber.isNotBlank()) it.customerNumber.trim() else it.customerName.trim().lowercase()
@@ -70,6 +70,11 @@ fun CustomerDirectoryScreen(viewModel: TallyViewModel, onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CenterAlignedTopAppBar(
             title = { Text("Customer Directory", color = RoyalCrimson, fontWeight = FontWeight.Bold) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = RoyalCrimson)
+                }
+            },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
         )
 
@@ -171,8 +176,8 @@ data class CustomerProfile(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerDetailScreen(customerIdentifier: String, logs: List<TransactionLog>, viewModel: TallyViewModel, onBack: () -> Unit, onIdentifierChanged: (String) -> Unit) {
-    val currentPurchases = logs.filter { it.type == "SALE" && ((it.customerNumber.trim() == customerIdentifier) || (it.customerNumber.isBlank() && it.customerName.trim().lowercase() == customerIdentifier)) }
-        .sortedByDescending { it.timestamp }
+    val currentPurchases = logs.asSequence().filter { it.type == "SALE" && ((it.customerNumber.trim() == customerIdentifier) || (it.customerNumber.isBlank() && it.customerName.trim().lowercase() == customerIdentifier)) }
+        .sortedByDescending { it.timestamp }.toList()
 
     var purchases by remember { mutableStateOf(currentPurchases) }
 
@@ -250,6 +255,11 @@ fun CustomerDetailScreen(customerIdentifier: String, logs: List<TransactionLog>,
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CenterAlignedTopAppBar(
             title = { Text("Customer Profile", color = RoyalCrimson, fontWeight = FontWeight.Bold) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = RoyalCrimson)
+                }
+            },
             actions = {
                 Button(
                     onClick = { showEditDialog = true },

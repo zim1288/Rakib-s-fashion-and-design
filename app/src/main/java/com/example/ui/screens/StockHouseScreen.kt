@@ -167,11 +167,11 @@ fun StockHouseScreen(viewModel: TallyViewModel) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            val filteredList = sarees.filter { it.brandCategory == selectedBrand }.filter {
+            val filteredList = sarees.asSequence().filter { it.brandCategory == selectedBrand }.filter {
                 (searchQuery.isBlank() || it.modelName.contains(searchQuery, ignoreCase = true) || it.sku.contains(searchQuery, ignoreCase = true)) &&
                         (fabricFilter == "All Fabrics" || fabricFilter.isBlank() || it.fabricType.contains(fabricFilter, ignoreCase = true)) &&
                         (colorFilter == "All Colors" || colorFilter.isBlank() || it.color.contains(colorFilter, ignoreCase = true))
-            }
+            }.toList()
 
             if (filteredList.isEmpty()) {
                 Box(

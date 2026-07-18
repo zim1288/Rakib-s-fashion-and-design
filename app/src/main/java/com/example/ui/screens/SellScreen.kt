@@ -46,13 +46,13 @@ fun SellScreen(viewModel: TallyViewModel) {
     val logs by viewModel.transactionLogs.collectAsStateWithLifecycle()
 
     val uniqueCustomers = remember(logs) {
-        logs.filter { it.type == "SALE" && (it.customerName.isNotBlank() || it.customerNumber.isNotBlank()) }
+        logs.asSequence().filter { it.type == "SALE" && (it.customerName.isNotBlank() || it.customerNumber.isNotBlank()) }
             .map { Pair(it.customerName.trim(), it.customerNumber.trim()) }
             .groupBy { it.first.lowercase() }
             .flatMap { (_, pairs) ->
                 val withNumbers = pairs.filter { it.second.isNotBlank() }
                 if (withNumbers.isNotEmpty()) withNumbers.distinctBy { it.second } else listOf(pairs.first())
-            }
+            }.toList()
     }
 
     var selectedItemIndex by remember { mutableIntStateOf(-1) }
