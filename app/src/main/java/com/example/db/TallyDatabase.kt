@@ -116,7 +116,7 @@ interface TallyDao {
     @Query("SELECT * FROM transaction_logs ORDER BY timestamp DESC")
     fun getAllTransactionLogs(): Flow<List<TransactionLog>>
 
-    @Query("UPDATE transaction_logs SET customer_name = :newName, customer_number = :newNumber WHERE type = 'SALE' AND ((customer_number = :oldNumber AND customer_number != '') OR (customer_number = '' AND LOWER(customer_name) = LOWER(:oldName)))")
+    @Query("UPDATE transaction_logs SET customer_name = :newName, customer_number = :newNumber WHERE type = 'SALE' AND ((customer_number = :oldNumber AND customer_number IS NOT NULL AND TRIM(customer_number) != '') OR ((customer_number IS NULL OR TRIM(customer_number) = '') AND LOWER(TRIM(customer_name)) = LOWER(TRIM(:oldName))))")
     suspend fun updateCustomerDetails(oldName: String, oldNumber: String, newName: String, newNumber: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

@@ -340,18 +340,19 @@ class TallyRepository(private val tallyDao: TallyDao) {
                     tallyDao.insertTransactionLog(
                         TransactionLog(
                             id = netItem.id ?: 0,
-                            type = netItem.type,
-                            modelName = netItem.modelName,
-                            sku = netItem.sku,
-                            color = netItem.color,
-                            fabricType = netItem.fabricType,
-                            quantity = netItem.quantity,
-                            unitPrice = netItem.unitPrice,
-                            totalAmount = netItem.totalAmount,
-                            customerName = netItem.customerName,
-                            timestamp = netItem.timestamp,
-                            dateString = netItem.dateString,
-                            timeString = netItem.timeString
+                            type = netItem.type ?: "SALE",
+                            modelName = netItem.modelName ?: "Unknown",
+                            sku = netItem.sku ?: "",
+                            color = netItem.color ?: "",
+                            fabricType = netItem.fabricType ?: "",
+                            quantity = netItem.quantity ?: 1,
+                            unitPrice = netItem.unitPrice ?: 0.0,
+                            totalAmount = netItem.totalAmount ?: 0.0,
+                            customerName = netItem.customerName ?: "",
+                            customerNumber = netItem.customerNumber ?: "",
+                            timestamp = netItem.timestamp ?: System.currentTimeMillis(),
+                            dateString = netItem.dateString ?: "",
+                            timeString = netItem.timeString ?: ""
                         )
                     )
                 }

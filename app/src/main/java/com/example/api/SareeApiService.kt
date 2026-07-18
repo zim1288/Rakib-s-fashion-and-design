@@ -42,19 +42,19 @@ data class NetworkProductionItem(
 @JsonClass(generateAdapter = true)
 data class NetworkTransactionLog(
     val id: Int?,
-    val type: String,
-    val modelName: String,
-    val sku: String = "",
-    val color: String = "",
-    val fabricType: String = "",
-    val quantity: Int,
-    val unitPrice: Double,
-    val totalAmount: Double,
-    val customerName: String = "",
-    val customerNumber: String = "",
-    val timestamp: Long,
-    val dateString: String,
-    val timeString: String = "",
+    val type: String?,
+    val modelName: String?,
+    val sku: String? = "",
+    val color: String? = "",
+    val fabricType: String? = "",
+    val quantity: Int?,
+    val unitPrice: Double?,
+    val totalAmount: Double?,
+    val customerName: String? = "",
+    val customerNumber: String? = "",
+    val timestamp: Long?,
+    val dateString: String?,
+    val timeString: String? = "",
     val email: String? = null
 )
 
