@@ -218,9 +218,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
     suspend fun syncOfflineData() {
         _syncState.value = SyncState.SYNCING
         try {
-            val sarees = tallyDao.getAllSareeItems().first()
-            val prodItems = tallyDao.getAllProductionItems().first()
-            val localTransactions = tallyDao.getAllTransactionLogs().first()
+            val sarees = tallyDao.getAllSareeItemsSync()
+            val prodItems = tallyDao.getAllProductionItemsSync()
+            val localTransactions = tallyDao.getAllTransactionLogsSync()
 
             val mappedSarees = sarees.map {
                 NetworkSareeItem(

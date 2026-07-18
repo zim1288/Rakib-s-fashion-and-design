@@ -104,6 +104,15 @@ interface TallyDao {
     @Delete
     suspend fun deleteProductionItem(item: ProductionItem)
 
+    @Query("SELECT * FROM saree_inventory")
+    suspend fun getAllSareeItemsSync(): List<SareeItem>
+
+    @Query("SELECT * FROM stock_production ORDER BY estimated_completion_date ASC")
+    suspend fun getAllProductionItemsSync(): List<ProductionItem>
+
+    @Query("SELECT * FROM transaction_logs ORDER BY timestamp DESC")
+    suspend fun getAllTransactionLogsSync(): List<TransactionLog>
+
     @Query("SELECT * FROM transaction_logs ORDER BY timestamp DESC")
     fun getAllTransactionLogs(): Flow<List<TransactionLog>>
 
