@@ -171,8 +171,16 @@ data class CustomerProfile(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerDetailScreen(customerIdentifier: String, logs: List<TransactionLog>, viewModel: TallyViewModel, onBack: () -> Unit, onIdentifierChanged: (String) -> Unit) {
-    val purchases = logs.filter { it.type == "SALE" && ((it.customerNumber.trim() == customerIdentifier) || (it.customerNumber.isBlank() && it.customerName.trim().lowercase() == customerIdentifier)) }
+    val currentPurchases = logs.filter { it.type == "SALE" && ((it.customerNumber.trim() == customerIdentifier) || (it.customerNumber.isBlank() && it.customerName.trim().lowercase() == customerIdentifier)) }
         .sortedByDescending { it.timestamp }
+
+    var purchases by remember { mutableStateOf(currentPurchases) }
+
+    LaunchedEffect(currentPurchases) {
+        if (currentPurchases.isNotEmpty()) {
+            purchases = currentPurchases
+        }
+    }
 
     val name = purchases.firstOrNull { it.customerName.isNotBlank() }?.customerName ?: "Unknown"
     val number = purchases.firstOrNull { it.customerNumber.isNotBlank() }?.customerNumber ?: ""

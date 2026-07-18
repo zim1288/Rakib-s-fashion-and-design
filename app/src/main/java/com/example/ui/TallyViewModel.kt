@@ -586,7 +586,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     fun updateCustomerProfile(oldName: String, oldNumber: String, newName: String, newNumber: String, onSuccess: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateCustomerDetails(oldName, oldNumber, newName, newNumber)
-            kotlinx.coroutines.delay(100) // Allow Room Flow to emit the updated list to UI before navigation
+            kotlinx.coroutines.delay(400) // Allow Room Flow to emit the updated list to UI before navigation
             forceSync()
             withContext(Dispatchers.Main) {
                 onSuccess()

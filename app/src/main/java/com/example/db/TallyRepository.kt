@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.api.NetworkProductionItem
 import com.example.api.NetworkSareeItem
 import com.example.api.NetworkTransactionLog
+import com.example.api.NetworkCustomerUpdateRequest
 import com.example.api.SareeApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,6 +77,15 @@ class TallyRepository(private val tallyDao: TallyDao) {
     // 4. Transaction log triggers with Optimistic Background Sync
     suspend fun updateCustomerDetails(oldName: String, oldNumber: String, newName: String, newNumber: String) {
         tallyDao.updateCustomerDetails(oldName, oldNumber, newName, newNumber)
+        repositoryScope.launch {
+            try {
+                SareeApi.service.updateCustomerDetailsOnServer(
+                    NetworkCustomerUpdateRequest(oldName, oldNumber, newName, newNumber)
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update customer details on server", e)
+            }
+        }
     }
 
     suspend fun insertTransactionLog(log: TransactionLog) {

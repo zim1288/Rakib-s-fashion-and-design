@@ -59,6 +59,14 @@ data class NetworkTransactionLog(
 )
 
 @JsonClass(generateAdapter = true)
+data class NetworkCustomerUpdateRequest(
+    val oldName: String,
+    val oldNumber: String,
+    val newName: String,
+    val newNumber: String
+)
+
+@JsonClass(generateAdapter = true)
 data class NetworkEmailRequest(
     val email: String,
     val code: String
@@ -105,6 +113,9 @@ interface SareeApiService {
 
     @POST("transactions")
     suspend fun syncTransactions(@Body logs: List<NetworkTransactionLog>): Response<Unit>
+
+    @POST("customers/update")
+    suspend fun updateCustomerDetailsOnServer(@Body request: NetworkCustomerUpdateRequest): Response<Unit>
 
     @POST("auth/send-verification")
     suspend fun sendVerificationEmail(@Body request: NetworkEmailRequest): Response<Unit>
@@ -207,6 +218,10 @@ object SareeApi {
             }
             override suspend fun syncTransactions(logs: List<NetworkTransactionLog>): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Synced ${logs.size} transactions.")
+                return Response.success(Unit)
+            }
+            override suspend fun updateCustomerDetailsOnServer(request: NetworkCustomerUpdateRequest): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Updated customer ${request.oldName} to ${request.newName}.")
                 return Response.success(Unit)
             }
             override suspend fun sendVerificationEmail(request: NetworkEmailRequest): Response<Unit> {
