@@ -51,6 +51,7 @@ data class NetworkTransactionLog(
     val unitPrice: Double,
     val totalAmount: Double,
     val customerName: String = "",
+    val customerNumber: String = "",
     val timestamp: Long,
     val dateString: String,
     val timeString: String = "",
@@ -101,6 +102,9 @@ interface SareeApiService {
 
     @POST("transactions")
     suspend fun logTransaction(@Body log: NetworkTransactionLog): Response<Unit>
+
+    @POST("transactions")
+    suspend fun syncTransactions(@Body logs: List<NetworkTransactionLog>): Response<Unit>
 
     @POST("auth/send-verification")
     suspend fun sendVerificationEmail(@Body request: NetworkEmailRequest): Response<Unit>
@@ -199,6 +203,10 @@ object SareeApi {
             override suspend fun getTransactions(): List<NetworkTransactionLog> = emptyList()
             override suspend fun logTransaction(log: NetworkTransactionLog): Response<Unit> {
                 Log.d(TAG, "Mock MongoDB: Logged transaction for ${log.modelName} successfully.")
+                return Response.success(Unit)
+            }
+            override suspend fun syncTransactions(logs: List<NetworkTransactionLog>): Response<Unit> {
+                Log.d(TAG, "Mock MongoDB: Synced ${logs.size} transactions.")
                 return Response.success(Unit)
             }
             override suspend fun sendVerificationEmail(request: NetworkEmailRequest): Response<Unit> {

@@ -306,9 +306,18 @@ fun HistoryScreen(viewModel: TallyViewModel) {
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text("${log.dateString} ${log.timeString}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                 }
-                                if (log.customerName.isNotBlank()) {
+                                val customerInfo = buildString {
+                                    if (log.customerName.isNotBlank()) {
+                                        append(log.customerName)
+                                    }
+                                    if (log.customerNumber.isNotBlank()) {
+                                        if (isNotEmpty()) append(" - ")
+                                        append(log.customerNumber)
+                                    }
+                                }
+                                if (customerInfo.isNotBlank()) {
                                     Text(
-                                        text = "Customer: ${log.customerName}",
+                                        text = "Customer: $customerInfo",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                                     )

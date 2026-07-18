@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.app.Application
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
@@ -9,7 +10,10 @@ import com.example.TallyApplication
 import com.example.db.*
 import com.example.api.SareeApi
 import kotlinx.coroutines.flow.*
+import com.example.api.NetworkImageUrl
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
@@ -64,6 +68,13 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     val isExporting = _isExporting.asStateFlow()
 
     // Screen navigation tracking
+    private val _customBackAction = MutableStateFlow<(() -> Unit)?>(null)
+    val customBackAction: StateFlow<(() -> Unit)?> = _customBackAction.asStateFlow()
+
+    fun setCustomBackAction(action: (() -> Unit)?) {
+        _customBackAction.value = action
+    }
+
     private val _currentScreen = MutableStateFlow("DASHBOARD") // DASHBOARD, STOCK_HOUSE, STOCK_PRODUCTION, PURCHASE, SELL, HISTORY, SETTINGS
     val currentScreen = _currentScreen.asStateFlow()
 
@@ -275,7 +286,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(newUser)
 
             // Trigger Verification Email and wait for result
-            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 repository.sendVerificationEmail(trimmedEmail, generatedCode)
             }
 
@@ -317,7 +328,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
                 )
             } catch (e: Exception) {
                 // If it fails, we still allow local login, but log it
-                android.util.Log.e("TallyViewModel", "Failed to sync user to production DB", e)
+                Log.e("TallyViewModel", "Failed to sync user to production DB", e)
             }
 
             _currentUserEmail.value = verifiedUser.email
@@ -348,7 +359,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(updatedUser)
 
             // Trigger Verification Email and wait for result
-            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 repository.sendVerificationEmail(email, newCode)
             }
 
@@ -401,7 +412,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             repository.insertUserAccount(updatedUser)
 
             // Trigger Verification Email and wait for result
-            val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 repository.sendVerificationEmail(trimmed, generatedCode)
             }
 
@@ -572,6 +583,16 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // SALES LOGGING (Optimistic UI Update)
+    fun updateCustomerProfile(oldName: String, oldNumber: String, newName: String, newNumber: String, onSuccess: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateCustomerDetails(oldName, oldNumber, newName, newNumber)
+            forceSync()
+            withContext(Dispatchers.Main) {
+                onSuccess()
+            }
+        }
+    }
+
     fun logClientSale(sareeItem: SareeItem, quantityToSell: Int, salePricePerPiece: Double, customerName: String, customerNumber: String, onError: (String) -> Unit, onSuccess: () -> Unit) {
         if (quantityToSell <= 0 || salePricePerPiece <= 0) {
             onError("Please enter valid positive numbers")
@@ -723,11 +744,11 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun deleteImageFromCloudinary(imageUrl: String?) {
         if (imageUrl != null && imageUrl.contains("res.cloudinary.com")) {
-            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    SareeApi.service.deleteImageOnServer(com.example.api.NetworkImageUrl(imageUrl))
+                    SareeApi.service.deleteImageOnServer(NetworkImageUrl(imageUrl))
                 } catch (e: Exception) {
-                    android.util.Log.e("TallyViewModel", "Failed to delete image: $imageUrl", e)
+                    Log.e("TallyViewModel", "Failed to delete image: $imageUrl", e)
                 }
             }
         }
@@ -741,7 +762,7 @@ class TallyViewModel(application: Application) : AndroidViewModel(application) {
             val context = getApplication<Application>()
             val uri = uriStr.toUri()
 
-            val fileBytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val fileBytes = withContext(Dispatchers.IO) {
                 val inputStream = context.contentResolver.openInputStream(uri)
                 val bytes = inputStream?.readBytes()
                 inputStream?.close()

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,40 +30,86 @@ fun CustomerDirectoryScreen(viewModel: TallyViewModel, onBack: () -> Unit) {
     val logs by viewModel.transactionLogs.collectAsStateWithLifecycle()
 
     var selectedCustomer by remember { mutableStateOf<String?>(null) }
+    var nameFilter by remember { mutableStateOf("") }
+    var numberFilter by remember { mutableStateOf("") }
 
     if (selectedCustomer != null) {
+        DisposableEffect(selectedCustomer) {
+            viewModel.setCustomBackAction { selectedCustomer = null }
+            onDispose { viewModel.setCustomBackAction(null) }
+        }
+
         CustomerDetailScreen(
             customerIdentifier = selectedCustomer!!,
             logs = logs,
-            onBack = { selectedCustomer = null }
+            viewModel = viewModel,
+            onBack = { selectedCustomer = null },
+            onIdentifierChanged = { selectedCustomer = it }
         )
         return
     }
 
     val customers = logs
-        .filter { it.type == "SALE" && (!(it.customerName ?: "").isBlank() || !(it.customerNumber ?: "").isBlank()) }
-        .groupBy { 
-            if (!(it.customerNumber ?: "").isBlank()) (it.customerNumber ?: "").trim() else (it.customerName ?: "").trim().lowercase() 
+        .filter { it.type == "SALE" && (it.customerName.isNotBlank() || it.customerNumber.isNotBlank()) }
+        .groupBy {
+            if (it.customerNumber.isNotBlank()) it.customerNumber.trim() else it.customerName.trim().lowercase()
         }
         .map { (id, purchases) ->
             val totalSpent = purchases.sumOf { it.totalAmount }
             val lastPurchaseDate = purchases.maxByOrNull { it.timestamp }?.dateString ?: ""
-            val name = purchases.firstOrNull { !(it.customerName ?: "").isBlank() }?.customerName ?: "Unknown"
-            val number = purchases.firstOrNull { !(it.customerNumber ?: "").isBlank() }?.customerNumber ?: ""
+            val name = purchases.firstOrNull { it.customerName.isNotBlank() }?.customerName ?: "Unknown"
+            val number = purchases.firstOrNull { it.customerNumber.isNotBlank() }?.customerNumber ?: ""
             CustomerProfile(id, name, number, totalSpent, lastPurchaseDate)
+        }
+        .filter { profile ->
+            (nameFilter.isBlank() || profile.name.contains(nameFilter, ignoreCase = true)) &&
+                    (numberFilter.isBlank() || profile.number.contains(numberFilter, ignoreCase = true))
         }
         .sortedByDescending { it.lastPurchaseDate }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CenterAlignedTopAppBar(
             title = { Text("Customer Directory", color = RoyalCrimson, fontWeight = FontWeight.Bold) },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
-                }
-            },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
         )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = nameFilter,
+                onValueChange = { nameFilter = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Name", color = Color.Gray) },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AntiqueCream,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = AntiqueCream
+                ),
+                shape = RoundedCornerShape(4.dp)
+            )
+            OutlinedTextField(
+                value = numberFilter,
+                onValueChange = { numberFilter = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Number", color = Color.Gray) },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AntiqueCream,
+                    unfocusedBorderColor = Color.DarkGray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    cursorColor = AntiqueCream
+                ),
+                shape = RoundedCornerShape(4.dp)
+            )
+        }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -123,20 +170,87 @@ data class CustomerProfile(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerDetailScreen(customerIdentifier: String, logs: List<TransactionLog>, onBack: () -> Unit) {
-    val purchases = logs.filter { it.type == "SALE" && (((it.customerNumber ?: "").trim() == customerIdentifier) || ((it.customerNumber ?: "").isBlank() && (it.customerName ?: "").trim().lowercase() == customerIdentifier)) }
+fun CustomerDetailScreen(customerIdentifier: String, logs: List<TransactionLog>, viewModel: TallyViewModel, onBack: () -> Unit, onIdentifierChanged: (String) -> Unit) {
+    val purchases = logs.filter { it.type == "SALE" && ((it.customerNumber.trim() == customerIdentifier) || (it.customerNumber.isBlank() && it.customerName.trim().lowercase() == customerIdentifier)) }
         .sortedByDescending { it.timestamp }
 
-    val name = purchases.firstOrNull { !(it.customerName ?: "").isBlank() }?.customerName ?: "Unknown"
-    val number = purchases.firstOrNull { !(it.customerNumber ?: "").isBlank() }?.customerNumber ?: ""
+    val name = purchases.firstOrNull { it.customerName.isNotBlank() }?.customerName ?: "Unknown"
+    val number = purchases.firstOrNull { it.customerNumber.isNotBlank() }?.customerNumber ?: ""
     val totalSpent = purchases.sumOf { it.totalAmount }
+
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    if (showEditDialog) {
+        var editName by remember { mutableStateOf(name) }
+        var editNumber by remember { mutableStateOf(number) }
+        AlertDialog(
+            onDismissRequest = { showEditDialog = false },
+            title = { Text("Edit Customer Profile", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Customer Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = editNumber,
+                        onValueChange = { editNumber = it },
+                        label = { Text("Customer Number") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val newIdentifier = if (editNumber.isNotBlank()) editNumber.trim() else editName.trim().lowercase()
+                        viewModel.updateCustomerProfile(name, number, editName.trim(), editNumber.trim()) {
+                            onIdentifierChanged(newIdentifier)
+                            showEditDialog = false
+                        }
+                    }
+                ) {
+                    Text("Save", color = RoyalCrimson, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditDialog = false }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         CenterAlignedTopAppBar(
             title = { Text("Customer Profile", color = RoyalCrimson, fontWeight = FontWeight.Bold) },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
+            actions = {
+                Button(
+                    onClick = { showEditDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalCrimson),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(end = 8.dp).height(36.dp)
+                ) {
+                    Text("EDIT", color = SlateDark, fontWeight = FontWeight.Bold)
                 }
             },
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.surface)

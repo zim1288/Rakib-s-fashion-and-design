@@ -40,6 +40,7 @@ import java.util.Locale
 @Composable
 fun AuthorizedLayout(viewModel: TallyViewModel, currentScreen: String, syncState: SyncState) {
     val email by viewModel.currentUserEmail.collectAsStateWithLifecycle()
+    val customBackAction by viewModel.customBackAction.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         // App Header Banner
@@ -47,7 +48,13 @@ fun AuthorizedLayout(viewModel: TallyViewModel, currentScreen: String, syncState
             userEmail = email,
             syncState = syncState,
             onSettings = { viewModel.toggleSettings() },
-            onBackToDashboard = { viewModel.navigateTo("DASHBOARD") },
+            onBackToDashboard = {
+                if (customBackAction != null) {
+                    customBackAction?.invoke()
+                } else {
+                    viewModel.navigateTo("DASHBOARD")
+                }
+            },
             showBackButton = currentScreen != "DASHBOARD",
         ) {
             viewModel.forceSync()

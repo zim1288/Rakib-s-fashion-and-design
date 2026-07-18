@@ -45,3 +45,10 @@ fun formatCurrency(amount: Double): String {
         amount.toString()
     }
 }
+
+fun String.toCloudinaryThumbnail(width: Int = 200, height: Int = 200): String {
+    if (this.contains("res.cloudinary.com") && this.contains("/upload/")) {
+        return this.replace("/upload/", "/upload/w_$width,h_$height,c_fill,q_auto,f_auto/")
+    }
+    return this
+}

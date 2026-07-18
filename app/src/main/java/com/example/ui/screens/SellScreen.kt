@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.PopupProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.*
 import com.example.ui.TallyViewModel
@@ -42,15 +43,27 @@ import java.util.Locale
 @Composable
 fun SellScreen(viewModel: TallyViewModel) {
     val sarees by viewModel.sareeItems.collectAsStateWithLifecycle()
+    val logs by viewModel.transactionLogs.collectAsStateWithLifecycle()
+
+    val uniqueCustomers = remember(logs) {
+        logs.filter { it.type == "SALE" && (it.customerName.isNotBlank() || it.customerNumber.isNotBlank()) }
+            .map { Pair(it.customerName.trim(), it.customerNumber.trim()) }
+            .groupBy { it.first.lowercase() }
+            .flatMap { (_, pairs) ->
+                val withNumbers = pairs.filter { it.second.isNotBlank() }
+                if (withNumbers.isNotEmpty()) withNumbers.distinctBy { it.second } else listOf(pairs.first())
+            }
+    }
+
     var selectedItemIndex by remember { mutableIntStateOf(-1) }
     var qtyToSellStr by remember { mutableStateOf("") }
     var retailPriceStr by remember { mutableStateOf("") }
     var customerNameStr by remember { mutableStateOf("") }
     var customerNumberStr by remember { mutableStateOf("") }
-    
+
     var feedbackMsg by remember { mutableStateOf<String?>(null) }
     var successMsg by remember { mutableStateOf<String?>(null) }
-    
+
     val focusManager = LocalFocusManager.current
 
     Column(
@@ -60,7 +73,7 @@ fun SellScreen(viewModel: TallyViewModel) {
     ) {
         Text("Record Retail Client Sale", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = RoyalCrimson)
         Text("Select an existing catalog saree in stock to subtract and log", style = MaterialTheme.typography.bodySmall)
-        
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (sarees.isEmpty()) {
@@ -76,7 +89,7 @@ fun SellScreen(viewModel: TallyViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Retail Saree Entry Selection:", style = MaterialTheme.typography.labelSmall)
-                    
+
                     // Simple Dropdown simulation
                     var expanded by remember { mutableStateOf(value = false) }
                     var searchDropdownQuery by remember { mutableStateOf("") }
@@ -134,52 +147,52 @@ fun SellScreen(viewModel: TallyViewModel) {
                                     singleLine = true
                                 )
                                 val filteredSarees = sarees.filter {
-                                    searchDropdownQuery.isBlank() || 
-                                    it.modelName.contains(searchDropdownQuery, ignoreCase = true) || 
-                                    it.sku.contains(searchDropdownQuery, ignoreCase = true)
+                                    searchDropdownQuery.isBlank() ||
+                                            it.modelName.contains(searchDropdownQuery, ignoreCase = true) ||
+                                            it.sku.contains(searchDropdownQuery, ignoreCase = true)
                                 }
                                 LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                                     items(filteredSarees.size) { i ->
                                         val item = filteredSarees[i]
                                         val idx = sarees.indexOf(item)
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                selectedItemIndex = idx
-                                                retailPriceStr = item.unitPrice.toString() // Prepopulate
-                                                expanded = false
-                                            }
-                                            .padding(12.dp)
-                                            .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = item.modelName,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Row {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    selectedItemIndex = idx
+                                                    retailPriceStr = item.unitPrice.toString() // Prepopulate
+                                                    expanded = false
+                                                }
+                                                .padding(12.dp)
+                                                .background(if (idx == selectedItemIndex) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
+                                        ) {
+                                            Column {
                                                 Text(
-                                                    text = item.brandCategory,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontSize = 11.sp,
+                                                    text = item.modelName,
                                                     fontWeight = FontWeight.Bold,
-                                                    maxLines = 1
-                                                )
-                                                Spacer(modifier = Modifier.width(12.dp))
-                                                Text(
-                                                    text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
-                                                    fontSize = 11.sp,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
+                                                Row {
+                                                    Text(
+                                                        text = item.brandCategory,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        maxLines = 1
+                                                    )
+                                                    Spacer(modifier = Modifier.width(12.dp))
+                                                    Text(
+                                                        text = "Avail: ${item.pieceCount} | P: ৳${formatCurrency(item.unitPrice)}",
+                                                        fontSize = 11.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
-                            }
                             }
                         }
                         Spacer(modifier = Modifier.height(12.dp))
@@ -201,9 +214,9 @@ fun SellScreen(viewModel: TallyViewModel) {
                             unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
                     )
-                    
+
                     Spacer(modifier = Modifier.height(12.dp))
-                    
+
                     OutlinedTextField(
                         value = retailPriceStr,
                         onValueChange = { retailPriceStr = it },
@@ -223,47 +236,119 @@ fun SellScreen(viewModel: TallyViewModel) {
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = customerNameStr,
-                        onValueChange = { customerNameStr = it },
-                        label = { Text("Customer Name (Optional)") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("customer_name_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    var customerNameExpanded by remember { mutableStateOf(false) }
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = customerNameStr,
+                            onValueChange = {
+                                customerNameStr = it
+                                customerNameExpanded = true
+                            },
+                            label = { Text("Customer Name (Optional)") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("customer_name_input"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
                         )
-                    )
+
+                        val filteredCustomers = uniqueCustomers.filter {
+                            customerNameStr.isNotBlank() && it.first.contains(customerNameStr, ignoreCase = true) && it.first.lowercase() != customerNameStr.lowercase()
+                        }
+
+                        DropdownMenu(
+                            expanded = customerNameExpanded && filteredCustomers.isNotEmpty(),
+                            onDismissRequest = { customerNameExpanded = false },
+                            properties = PopupProperties(focusable = false),
+                            modifier = Modifier.fillMaxWidth(0.9f).background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            filteredCustomers.take(5).forEach { (name, number) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                            if (number.isNotBlank()) {
+                                                Text(number, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        customerNameStr = name
+                                        if (number.isNotBlank()) customerNumberStr = number
+                                        customerNameExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    OutlinedTextField(
-                        value = customerNumberStr,
-                        onValueChange = { customerNumberStr = it },
-                        label = { Text("Customer Number (Optional)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("customer_number_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    var customerNumberExpanded by remember { mutableStateOf(false) }
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = customerNumberStr,
+                            onValueChange = {
+                                customerNumberStr = it
+                                customerNumberExpanded = true
+                            },
+                            label = { Text("Customer Number (Optional)") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("customer_number_input"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                focusedLabelColor = MaterialTheme.colorScheme.primary,
+                                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
                         )
-                    )
+
+                        val filteredNumbers = uniqueCustomers.filter {
+                            customerNumberStr.isNotBlank() && it.second.contains(customerNumberStr, ignoreCase = true) && it.second != customerNumberStr
+                        }
+
+                        DropdownMenu(
+                            expanded = customerNumberExpanded && filteredNumbers.isNotEmpty(),
+                            onDismissRequest = { customerNumberExpanded = false },
+                            properties = PopupProperties(focusable = false),
+                            modifier = Modifier.fillMaxWidth(0.9f).background(MaterialTheme.colorScheme.surface)
+                        ) {
+                            filteredNumbers.take(5).forEach { (name, number) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(number, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                            if (name.isNotBlank()) {
+                                                Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        customerNumberStr = number
+                                        if (name.isNotBlank()) customerNameStr = name
+                                        customerNumberExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     feedbackMsg?.let { errorMsg ->
                         Text(errorMsg, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
                     }
-                    
+
                     successMsg?.let { successText ->
                         Text(successText, color = Color(0xFF0F5132), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
                     }

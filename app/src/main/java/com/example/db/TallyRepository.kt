@@ -74,6 +74,10 @@ class TallyRepository(private val tallyDao: TallyDao) {
     }
 
     // 4. Transaction log triggers with Optimistic Background Sync
+    suspend fun updateCustomerDetails(oldName: String, oldNumber: String, newName: String, newNumber: String) {
+        tallyDao.updateCustomerDetails(oldName, oldNumber, newName, newNumber)
+    }
+
     suspend fun insertTransactionLog(log: TransactionLog) {
         val id = tallyDao.insertTransactionLog(log)
         val insertedLog = log.copy(id = id.toInt())
@@ -186,10 +190,14 @@ class TallyRepository(private val tallyDao: TallyDao) {
                         id = log.id,
                         type = log.type,
                         modelName = log.modelName,
+                        sku = log.sku,
+                        color = log.color,
+                        fabricType = log.fabricType,
                         quantity = log.quantity,
                         unitPrice = log.unitPrice,
                         totalAmount = log.totalAmount,
                         customerName = log.customerName,
+                        customerNumber = log.customerNumber,
                         timestamp = log.timestamp,
                         dateString = log.dateString,
                         timeString = log.timeString
@@ -214,23 +222,28 @@ class TallyRepository(private val tallyDao: TallyDao) {
             val prodItems = tallyDao.getAllProductionItems().first()
             val localTransactions = tallyDao.getAllTransactionLogs().first()
 
-            SareeApi.service.syncInventory(
-                sarees.map {
-                    NetworkSareeItem(
-                        id = it.id,
-                        modelName = it.modelName,
-                        sku = it.sku,
-                        color = it.color,
-                        fabricType = it.fabricType,
-                        brandCategory = it.brandCategory,
-                        unitPrice = it.unitPrice,
-                        pieceCount = it.pieceCount,
-                        imageUrl = it.imageUrl
-                    )
+            val mappedSarees = sarees.map {
+                NetworkSareeItem(
+                    id = it.id,
+                    modelName = it.modelName,
+                    sku = it.sku,
+                    color = it.color,
+                    fabricType = it.fabricType,
+                    brandCategory = it.brandCategory,
+                    unitPrice = it.unitPrice,
+                    pieceCount = it.pieceCount,
+                    imageUrl = it.imageUrl
+                )
+            }
+            mappedSarees.chunked(100).forEach { batch ->
+                try {
+                    SareeApi.service.syncInventory(batch)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to sync inventory batch", e)
                 }
-            )
+            }
 
-            SareeApi.service.syncProduction(prodItems.map {
+            val mappedProduction = prodItems.map {
                 NetworkProductionItem(
                     id = it.id,
                     modelName = it.modelName,
@@ -242,30 +255,38 @@ class TallyRepository(private val tallyDao: TallyDao) {
                     status = it.status,
                     imageUrl = it.imageUrl
                 )
-            })
-
-            // Push local transactions one-by-one to server to ensure offline transactions are synced
-            localTransactions.forEach { log ->
+            }
+            mappedProduction.chunked(100).forEach { batch ->
                 try {
-                    SareeApi.service.logTransaction(
-                        NetworkTransactionLog(
-                            id = log.id,
-                            type = log.type,
-                            modelName = log.modelName,
-                            sku = log.sku,
-                            color = log.color,
-                            fabricType = log.fabricType,
-                            quantity = log.quantity,
-                            unitPrice = log.unitPrice,
-                            totalAmount = log.totalAmount,
-                            customerName = log.customerName,
-                            timestamp = log.timestamp,
-                            dateString = log.dateString,
-                            timeString = log.timeString
-                        )
-                    )
+                    SareeApi.service.syncProduction(batch)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to push queued transaction ${log.id}", e)
+                    Log.e(TAG, "Failed to sync production batch", e)
+                }
+            }
+
+            val mappedTransactions = localTransactions.map { log ->
+                NetworkTransactionLog(
+                    id = log.id,
+                    type = log.type,
+                    modelName = log.modelName,
+                    sku = log.sku,
+                    color = log.color,
+                    fabricType = log.fabricType,
+                    quantity = log.quantity,
+                    unitPrice = log.unitPrice,
+                    totalAmount = log.totalAmount,
+                    customerName = log.customerName,
+                    customerNumber = log.customerNumber,
+                    timestamp = log.timestamp,
+                    dateString = log.dateString,
+                    timeString = log.timeString
+                )
+            }
+            mappedTransactions.chunked(100).forEach { batch ->
+                try {
+                    SareeApi.service.syncTransactions(batch)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to sync transactions batch", e)
                 }
             }
 
