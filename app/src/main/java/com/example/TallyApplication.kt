@@ -49,12 +49,33 @@ class TallyApplication : Application() {
             }
         }
 
+        val migration9to10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE transaction_logs ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0")
+                } catch (e: Exception) {
+                    // Ignore if column already exists
+                }
+            }
+        }
+
+        val migration10to11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                try {
+                    db.execSQL("ALTER TABLE saree_inventory ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE stock_production ADD COLUMN last_modified INTEGER NOT NULL DEFAULT 0")
+                } catch (e: Exception) {
+                    // Ignore if column already exists
+                }
+            }
+        }
+
         database = Room.databaseBuilder(
             applicationContext,
             TallyDatabase::class.java,
             "tally_khata_database"
         )
-            .addMigrations(migration6to7, migration8to9)
+            .addMigrations(migration6to7, migration8to9, migration9to10, migration10to11)
             .fallbackToDestructiveMigration(true)
             // 3. Database Migration Strategy:
             // Destructive migration is removed for production to ensure no data loss occurs

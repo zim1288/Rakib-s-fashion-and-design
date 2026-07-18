@@ -14,7 +14,8 @@ data class SareeItem(
     @ColumnInfo(name = "unit_price") val unitPrice: Double,
     @ColumnInfo(name = "piece_count") val pieceCount: Int,
     @ColumnInfo(name = "image_url") val imageUrl: String? = null,
-    @ColumnInfo(name = "local_image_url") val localImageUrl: String? = null
+    @ColumnInfo(name = "local_image_url") val localImageUrl: String? = null,
+    @ColumnInfo(name = "last_modified") val lastModified: Long = System.currentTimeMillis()
 ) {
     val totalValue: Double get() = unitPrice * pieceCount
 }
@@ -30,7 +31,8 @@ data class ProductionItem(
     @ColumnInfo(name = "estimated_completion_date") val estimatedCompletionDate: String,
     @ColumnInfo(name = "status") val status: String, // "In Progress" or "Completed"
     @ColumnInfo(name = "image_url") val imageUrl: String? = null,
-    @ColumnInfo(name = "local_image_url") val localImageUrl: String? = null
+    @ColumnInfo(name = "local_image_url") val localImageUrl: String? = null,
+    @ColumnInfo(name = "last_modified") val lastModified: Long = System.currentTimeMillis()
 )
 
 @Entity(tableName = "transaction_logs")
@@ -48,7 +50,8 @@ data class TransactionLog(
     @ColumnInfo(name = "customer_number") val customerNumber: String = "",
     @ColumnInfo(name = "timestamp") val timestamp: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "date_string") val dateString: String, // e.g. "2026-06-19"
-    @ColumnInfo(name = "time_string") val timeString: String = "" // e.g. "14:30:00"
+    @ColumnInfo(name = "time_string") val timeString: String = "", // e.g. "14:30:00"
+    @ColumnInfo(name = "last_modified") val lastModified: Long = System.currentTimeMillis()
 )
 
 @Entity(tableName = "user_accounts")
@@ -116,8 +119,8 @@ interface TallyDao {
     @Query("SELECT * FROM transaction_logs ORDER BY timestamp DESC")
     fun getAllTransactionLogs(): Flow<List<TransactionLog>>
 
-    @Query("UPDATE transaction_logs SET customer_name = :newName, customer_number = :newNumber WHERE type = 'SALE' AND ((customer_number = :oldNumber AND customer_number IS NOT NULL AND TRIM(customer_number) != '') OR ((customer_number IS NULL OR TRIM(customer_number) = '') AND LOWER(TRIM(customer_name)) = LOWER(TRIM(:oldName))))")
-    suspend fun updateCustomerDetails(oldName: String, oldNumber: String, newName: String, newNumber: String)
+    @Query("UPDATE transaction_logs SET customer_name = :newName, customer_number = :newNumber, last_modified = :now WHERE type = 'SALE' AND ((customer_number = :oldNumber AND customer_number IS NOT NULL AND TRIM(customer_number) != '') OR ((customer_number IS NULL OR TRIM(customer_number) = '') AND LOWER(TRIM(customer_name)) = LOWER(TRIM(:oldName))))")
+    suspend fun updateCustomerDetails(oldName: String, oldNumber: String, newName: String, newNumber: String, now: Long = System.currentTimeMillis())
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransactionLog(log: TransactionLog): Long
@@ -135,7 +138,7 @@ interface TallyDao {
     suspend fun insertUserAccount(user: UserAccount): Long
 }
 
-@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 9, exportSchema = false)
+@Database(entities = [SareeItem::class, ProductionItem::class, TransactionLog::class, UserAccount::class], version = 11, exportSchema = false)
 abstract class TallyDatabase : RoomDatabase() {
     abstract fun tallyDao(): TallyDao
 }

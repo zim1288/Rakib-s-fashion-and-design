@@ -182,7 +182,7 @@ fun CustomerDetailScreen(customerIdentifier: String, logs: List<TransactionLog>,
         }
     }
 
-    val name = purchases.firstOrNull { it.customerName.isNotBlank() }?.customerName ?: "Unknown"
+    val name = purchases.firstOrNull { it.customerName.isNotBlank() }?.customerName ?: customerIdentifier
     val number = purchases.firstOrNull { it.customerNumber.isNotBlank() }?.customerNumber ?: ""
     val totalSpent = purchases.sumOf { it.totalAmount }
 

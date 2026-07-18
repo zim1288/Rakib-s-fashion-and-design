@@ -29,21 +29,35 @@ const upload = multer({ storage: storage });
 
 // Check environment variables first
 if (!process.env.MONGODB_URI) {
-    console.error('FATAL ERROR: MONGODB_URI is not defined in the .env file.');
-    process.exit(1);
+    console.error('WARNING: MONGODB_URI is not defined in the .env file. Database connection skipped.');
+} else {
+    // Connect to MongoDB using modern driver framework
+    mongoose.connect(process.env.MONGODB_URI, { dbName: 'Silk_and_fashion' })
+      .then(() => console.log('Successfully connected to Silk_and_fashion MongoDB!'))
+      .catch(err => {
+          console.error('Could not connect to MongoDB:', err);
+      });
 }
-
-// Connect to MongoDB using modern driver framework
-mongoose.connect(process.env.MONGODB_URI, { dbName: 'Silk_and_fashion' })
-  .then(() => console.log('Successfully connected to Silk_and_fashion MongoDB!'))
-  .catch(err => {
-      console.error('Could not connect to MongoDB:', err);
-      process.exit(1);
-  });
 
 // Health check route for testing backend status
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+});
+
+// Root route for preview
+app.get('/', (req, res) => {
+    res.send(`
+        <html>
+            <head><title>Rakib Silk & Fashion API</title></head>
+            <body style="font-family: sans-serif; padding: 2rem; text-align: center;">
+                <h1>Rakib Silk & Fashion Backend API is Running</h1>
+                <p>This is the backend server for the Android application.</p>
+                <p>Status: <a href="/health">/health</a></p>
+                <hr style="margin-top: 2rem; border: none; border-top: 1px solid #ccc;" />
+                <p style="color: #666; font-size: 0.9em;">Note: The Android app UI cannot be previewed in this web-based iframe. Please use the codebase for your development.</p>
+            </body>
+        </html>
+    `);
 });
 
 // --- Upload Route ---
@@ -190,7 +204,12 @@ app.post('/v1/production', async (req, res) => {
 // --- Transaction Routes ---
 app.get('/v1/transactions', async (req, res) => {
     try {
-        const logs = await UserLog.find({ dataType: 'transaction' }, '-__v');
+        const email = req.header("X-User-Email");
+        let filter = { dataType: "transaction" };
+        if (email && email !== "anonymous") {
+            filter.email = email;
+        }
+        const logs = await UserLog.find(filter, "-__v");
         res.json(logs);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -206,20 +225,45 @@ app.post('/v1/transactions', async (req, res) => {
         if (Array.isArray(log)) {
              const bulkOps = log.map(item => ({
                  updateOne: {
-                     filter: { id: item.id, dataType: 'transaction' },
+                     filter: { id: item.id, email: email, dataType: 'transaction' },
                      update: { $set: { ...item, email, dataType: 'transaction' } },
                      upsert: true
                  }
              }));
              if (bulkOps.length > 0) await UserLog.bulkWrite(bulkOps);
         } else {
-             await UserLog.findOneAndUpdate({ id: log.id, dataType: 'transaction' }, { ...log, email, dataType: 'transaction' }, { upsert: true });
+             await UserLog.findOneAndUpdate({ id: log.id, email: email, dataType: 'transaction' }, { $set: { ...log, email, dataType: 'transaction' } }, { upsert: true });
         }
         res.status(200).send();
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+app.post("/v1/customers/update", async (req, res) => {
+    try {
+        const { oldName, oldNumber, newName, newNumber } = req.body;
+        const email = req.header("X-User-Email");
+        if (!email) return res.status(401).send("Unauthorized");
+
+        let updateFilter = { type: "SALE", email: email, dataType: "transaction" };
+        if (oldNumber && oldNumber.trim() !== "") {
+            updateFilter.customerNumber = oldNumber.trim();
+        } else {
+            updateFilter.$or = [
+                { customerNumber: { $exists: false } },
+                { customerNumber: "" },
+                { customerNumber: null }
+            ];
+            updateFilter.customerName = { $regex: new RegExp("^" + (oldName || "").trim() + "$", "i") };
+        }
+
+        await UserLog.updateMany(updateFilter, { $set: { customerName: newName, customerNumber: newNumber } });
+        res.status(200).send();
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 app.post('/v1/auth/register', async (req, res) => {
     try {
@@ -320,7 +364,7 @@ app.post('/v1/auth/send-verification', async (req, res) => {
 });
 
 // Start the Server
-const PORT = process.env.BACKEND_PORT || 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });

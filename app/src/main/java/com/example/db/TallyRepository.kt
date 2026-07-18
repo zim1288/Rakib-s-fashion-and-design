@@ -42,14 +42,16 @@ class TallyRepository(private val tallyDao: TallyDao) {
 
     // 2. Saree inventory actions with Optimistic Background Sync
     suspend fun insertSareeItem(item: SareeItem) {
-        val id = tallyDao.insertSareeItem(item)
-        val insertedItem = item.copy(id = id.toInt())
+        val updated = item.copy(lastModified = System.currentTimeMillis())
+        val id = tallyDao.insertSareeItem(updated)
+        val insertedItem = updated.copy(id = id.toInt())
         triggerInventorySync(insertedItem)
     }
 
     suspend fun updateSareeItem(item: SareeItem) {
-        tallyDao.updateSareeItem(item)
-        triggerInventorySync(item)
+        val updated = item.copy(lastModified = System.currentTimeMillis())
+        tallyDao.updateSareeItem(updated)
+        triggerInventorySync(updated)
     }
 
     suspend fun deleteSareeItem(item: SareeItem) {
@@ -59,14 +61,16 @@ class TallyRepository(private val tallyDao: TallyDao) {
 
     // 3. Stock in production actions with Optimistic Background Sync
     suspend fun insertProductionItem(item: ProductionItem) {
-        val id = tallyDao.insertProductionItem(item)
-        val insertedItem = item.copy(id = id.toInt())
+        val updated = item.copy(lastModified = System.currentTimeMillis())
+        val id = tallyDao.insertProductionItem(updated)
+        val insertedItem = updated.copy(id = id.toInt())
         triggerProductionSync(insertedItem)
     }
 
     suspend fun updateProductionItem(item: ProductionItem) {
-        tallyDao.updateProductionItem(item)
-        triggerProductionSync(item)
+        val updated = item.copy(lastModified = System.currentTimeMillis())
+        tallyDao.updateProductionItem(updated)
+        triggerProductionSync(updated)
     }
 
     suspend fun deleteProductionItem(item: ProductionItem) {
@@ -89,8 +93,9 @@ class TallyRepository(private val tallyDao: TallyDao) {
     }
 
     suspend fun insertTransactionLog(log: TransactionLog) {
-        val id = tallyDao.insertTransactionLog(log)
-        val insertedLog = log.copy(id = id.toInt())
+        val updated = log.copy(lastModified = System.currentTimeMillis())
+        val id = tallyDao.insertTransactionLog(updated)
+        val insertedLog = updated.copy(id = id.toInt())
         triggerTransactionLogSync(insertedLog)
     }
 
@@ -210,7 +215,8 @@ class TallyRepository(private val tallyDao: TallyDao) {
                         customerNumber = log.customerNumber,
                         timestamp = log.timestamp,
                         dateString = log.dateString,
-                        timeString = log.timeString
+                        timeString = log.timeString,
+                        lastModified = log.lastModified
                     )
                 )
                 if (response.isSuccessful) {
@@ -232,141 +238,208 @@ class TallyRepository(private val tallyDao: TallyDao) {
             val prodItems = tallyDao.getAllProductionItemsSync()
             val localTransactions = tallyDao.getAllTransactionLogsSync()
 
-            val mappedSarees = sarees.map {
-                NetworkSareeItem(
-                    id = it.id,
-                    modelName = it.modelName,
-                    sku = it.sku,
-                    color = it.color,
-                    fabricType = it.fabricType,
-                    brandCategory = it.brandCategory,
-                    unitPrice = it.unitPrice,
-                    pieceCount = it.pieceCount,
-                    imageUrl = it.imageUrl
-                )
-            }
-            mappedSarees.chunked(100).forEach { batch ->
-                try {
-                    SareeApi.service.syncInventory(batch)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to sync inventory batch", e)
-                }
-            }
-
-            val mappedProduction = prodItems.map {
-                NetworkProductionItem(
-                    id = it.id,
-                    modelName = it.modelName,
-                    sku = it.sku,
-                    color = it.color,
-                    fabricType = it.fabricType,
-                    quantity = it.quantity,
-                    estimatedCompletionDate = it.estimatedCompletionDate,
-                    status = it.status,
-                    imageUrl = it.imageUrl
-                )
-            }
-            mappedProduction.chunked(100).forEach { batch ->
-                try {
-                    SareeApi.service.syncProduction(batch)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to sync production batch", e)
-                }
-            }
-
-            val mappedTransactions = localTransactions.map { log ->
-                NetworkTransactionLog(
-                    id = log.id,
-                    type = log.type,
-                    modelName = log.modelName,
-                    sku = log.sku,
-                    color = log.color,
-                    fabricType = log.fabricType,
-                    quantity = log.quantity,
-                    unitPrice = log.unitPrice,
-                    totalAmount = log.totalAmount,
-                    customerName = log.customerName,
-                    customerNumber = log.customerNumber,
-                    timestamp = log.timestamp,
-                    dateString = log.dateString,
-                    timeString = log.timeString
-                )
-            }
-            mappedTransactions.chunked(100).forEach { batch ->
-                try {
-                    SareeApi.service.syncTransactions(batch)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to sync transactions batch", e)
-                }
-            }
-
             // FETCH data from server to keep this device in sync
             val serverInventory = SareeApi.service.getInventory()
             val serverProduction = SareeApi.service.getProduction()
             val serverTransactions = SareeApi.service.getTransactions()
 
-            // Update local database with server truth
-            if (serverInventory.isNotEmpty()) {
-                tallyDao.deleteAllSareeItems()
-                serverInventory.forEach { netItem ->
-                    tallyDao.insertSareeItem(
-                        SareeItem(
-                            id = netItem.id ?: 0,
-                            modelName = netItem.modelName,
-                            sku = netItem.sku,
-                            color = netItem.color,
-                            fabricType = netItem.fabricType,
-                            brandCategory = netItem.brandCategory,
-                            unitPrice = netItem.unitPrice,
-                            pieceCount = netItem.pieceCount,
-                            imageUrl = netItem.imageUrl
-                        )
-                    )
+            // Execute remote pushes (Inventory)
+            val serverInvMap = serverInventory.associateBy { it.id ?: 0 }
+            val inventoryToPush = mutableListOf<NetworkSareeItem>()
+
+            sarees.forEach { localInv ->
+                val serverInv = serverInvMap[localInv.id]
+                if (serverInv == null) {
+                    inventoryToPush.add(NetworkSareeItem(
+                        id = localInv.id, modelName = localInv.modelName, sku = localInv.sku,
+                        color = localInv.color, fabricType = localInv.fabricType,
+                        brandCategory = localInv.brandCategory, unitPrice = localInv.unitPrice,
+                        pieceCount = localInv.pieceCount, imageUrl = localInv.imageUrl,
+                        lastModified = localInv.lastModified
+                    ))
+                } else {
+                    if (localInv.lastModified > (serverInv.lastModified ?: 0L)) {
+                        inventoryToPush.add(NetworkSareeItem(
+                            id = localInv.id, modelName = localInv.modelName, sku = localInv.sku,
+                            color = localInv.color, fabricType = localInv.fabricType,
+                            brandCategory = localInv.brandCategory, unitPrice = localInv.unitPrice,
+                            pieceCount = localInv.pieceCount, imageUrl = localInv.imageUrl,
+                            lastModified = localInv.lastModified
+                        ))
+                    }
                 }
             }
 
-            if (serverProduction.isNotEmpty()) {
-                tallyDao.deleteAllProductionItems()
-                serverProduction.forEach { netItem ->
-                    tallyDao.insertProductionItem(
-                        ProductionItem(
-                            id = netItem.id ?: 0,
-                            modelName = netItem.modelName,
-                            sku = netItem.sku,
-                            color = netItem.color,
-                            fabricType = netItem.fabricType,
-                            quantity = netItem.quantity,
-                            estimatedCompletionDate = netItem.estimatedCompletionDate,
-                            status = netItem.status,
-                            imageUrl = netItem.imageUrl
-                        )
-                    )
+            if (inventoryToPush.isNotEmpty()) {
+                inventoryToPush.chunked(100).forEach { batch ->
+                    try {
+                        SareeApi.service.syncInventory(batch)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to sync inventory batch", e)
+                    }
                 }
             }
 
-            if (serverTransactions.isNotEmpty()) {
-                tallyDao.deleteAllTransactionLogs()
-                serverTransactions.forEach { netItem ->
+            // Execute remote pushes (Production)
+            val serverProdMap = serverProduction.associateBy { it.id ?: 0 }
+            val productionToPush = mutableListOf<NetworkProductionItem>()
+
+            prodItems.forEach { localProd ->
+                val serverProd = serverProdMap[localProd.id]
+                if (serverProd == null) {
+                    productionToPush.add(NetworkProductionItem(
+                        id = localProd.id, modelName = localProd.modelName, sku = localProd.sku,
+                        color = localProd.color, fabricType = localProd.fabricType,
+                        quantity = localProd.quantity, estimatedCompletionDate = localProd.estimatedCompletionDate,
+                        status = localProd.status, imageUrl = localProd.imageUrl,
+                        lastModified = localProd.lastModified
+                    ))
+                } else {
+                    if (localProd.lastModified > (serverProd.lastModified ?: 0L)) {
+                        productionToPush.add(NetworkProductionItem(
+                            id = localProd.id, modelName = localProd.modelName, sku = localProd.sku,
+                            color = localProd.color, fabricType = localProd.fabricType,
+                            quantity = localProd.quantity, estimatedCompletionDate = localProd.estimatedCompletionDate,
+                            status = localProd.status, imageUrl = localProd.imageUrl,
+                            lastModified = localProd.lastModified
+                        ))
+                    }
+                }
+            }
+
+            if (productionToPush.isNotEmpty()) {
+                productionToPush.chunked(100).forEach { batch ->
+                    try {
+                        SareeApi.service.syncProduction(batch)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to sync production batch", e)
+                    }
+                }
+            }
+
+
+            // --- SMART SYNC FOR TRANSACTIONS ---
+            val serverTxMap = serverTransactions.associateBy { it.id ?: 0 }
+            val transactionsToPush = mutableListOf<NetworkTransactionLog>()
+
+            localTransactions.forEach { localTx ->
+                val serverTx = serverTxMap[localTx.id]
+                if (serverTx == null) {
+                    transactionsToPush.add(NetworkTransactionLog(
+                        id = localTx.id, type = localTx.type, modelName = localTx.modelName,
+                        sku = localTx.sku, color = localTx.color, fabricType = localTx.fabricType,
+                        quantity = localTx.quantity, unitPrice = localTx.unitPrice,
+                        totalAmount = localTx.totalAmount, customerName = localTx.customerName,
+                        customerNumber = localTx.customerNumber, timestamp = localTx.timestamp,
+                        dateString = localTx.dateString, timeString = localTx.timeString,
+                        lastModified = localTx.lastModified
+                    ))
+                } else {
+                    val localMod = localTx.lastModified
+                    val serverMod = serverTx.lastModified ?: 0L
+                    if (localMod > serverMod) {
+                        transactionsToPush.add(NetworkTransactionLog(
+                            id = localTx.id, type = localTx.type, modelName = localTx.modelName,
+                            sku = localTx.sku, color = localTx.color, fabricType = localTx.fabricType,
+                            quantity = localTx.quantity, unitPrice = localTx.unitPrice,
+                            totalAmount = localTx.totalAmount, customerName = localTx.customerName,
+                            customerNumber = localTx.customerNumber, timestamp = localTx.timestamp,
+                            dateString = localTx.dateString, timeString = localTx.timeString,
+                            lastModified = localTx.lastModified
+                        ))
+                    }
+                }
+            }
+
+            if (transactionsToPush.isNotEmpty()) {
+                transactionsToPush.chunked(100).forEach { batch ->
+                    try {
+                        SareeApi.service.syncTransactions(batch)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to sync transactions batch", e)
+                    }
+                }
+            }
+
+            val localTxMap = localTransactions.associateBy { it.id }
+            serverTransactions.forEach { serverTx ->
+                val localTx = localTxMap[serverTx.id ?: 0]
+                val localMod = localTx?.lastModified ?: 0L
+                val serverMod = serverTx.lastModified ?: 0L
+
+                if (localTx == null || serverMod > localMod) {
                     tallyDao.insertTransactionLog(
                         TransactionLog(
-                            id = netItem.id ?: 0,
-                            type = netItem.type ?: "SALE",
-                            modelName = netItem.modelName ?: "Unknown",
-                            sku = netItem.sku ?: "",
-                            color = netItem.color ?: "",
-                            fabricType = netItem.fabricType ?: "",
-                            quantity = netItem.quantity ?: 1,
-                            unitPrice = netItem.unitPrice ?: 0.0,
-                            totalAmount = netItem.totalAmount ?: 0.0,
-                            customerName = netItem.customerName ?: "",
-                            customerNumber = netItem.customerNumber ?: "",
-                            timestamp = netItem.timestamp ?: System.currentTimeMillis(),
-                            dateString = netItem.dateString ?: "",
-                            timeString = netItem.timeString ?: ""
+                            id = serverTx.id ?: 0,
+                            type = serverTx.type ?: "SALE",
+                            modelName = serverTx.modelName ?: "Unknown",
+                            sku = serverTx.sku ?: "",
+                            color = serverTx.color ?: "",
+                            fabricType = serverTx.fabricType ?: "",
+                            quantity = serverTx.quantity ?: 1,
+                            unitPrice = serverTx.unitPrice ?: 0.0,
+                            totalAmount = serverTx.totalAmount ?: 0.0,
+                            customerName = serverTx.customerName ?: "",
+                            customerNumber = serverTx.customerNumber ?: "",
+                            timestamp = serverTx.timestamp ?: System.currentTimeMillis(),
+                            dateString = serverTx.dateString ?: "",
+                            timeString = serverTx.timeString ?: "",
+                            lastModified = serverTx.lastModified ?: 0L
                         )
                     )
                 }
             }
+
+            // Update local database with server truth (Smart Pull for Inventory)
+            val localInvMap = sarees.associateBy { it.id }
+            serverInventory.forEach { serverInv ->
+                val localInv = localInvMap[serverInv.id ?: 0]
+                val localMod = localInv?.lastModified ?: 0L
+                val serverMod = serverInv.lastModified ?: 0L
+
+                if (localInv == null || serverMod > localMod) {
+                    tallyDao.insertSareeItem(
+                        SareeItem(
+                            id = serverInv.id ?: 0,
+                            modelName = serverInv.modelName,
+                            sku = serverInv.sku,
+                            color = serverInv.color,
+                            fabricType = serverInv.fabricType,
+                            brandCategory = serverInv.brandCategory,
+                            unitPrice = serverInv.unitPrice,
+                            pieceCount = serverInv.pieceCount,
+                            imageUrl = serverInv.imageUrl,
+                            lastModified = serverInv.lastModified ?: 0L
+                        )
+                    )
+                }
+            }
+
+            // Update local database with server truth (Smart Pull for Production)
+            val localProdMap = prodItems.associateBy { it.id }
+            serverProduction.forEach { serverProd ->
+                val localProd = localProdMap[serverProd.id ?: 0]
+                val localMod = localProd?.lastModified ?: 0L
+                val serverMod = serverProd.lastModified ?: 0L
+
+                if (localProd == null || serverMod > localMod) {
+                    tallyDao.insertProductionItem(
+                        ProductionItem(
+                            id = serverProd.id ?: 0,
+                            modelName = serverProd.modelName,
+                            sku = serverProd.sku,
+                            color = serverProd.color,
+                            fabricType = serverProd.fabricType,
+                            quantity = serverProd.quantity,
+                            estimatedCompletionDate = serverProd.estimatedCompletionDate,
+                            status = serverProd.status,
+                            imageUrl = serverProd.imageUrl,
+                            lastModified = serverProd.lastModified ?: 0L
+                        )
+                    )
+                }
+            }
+
 
             _syncState.value = SyncState.SUCCESS
         } catch (e: Exception) {

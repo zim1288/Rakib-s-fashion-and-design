@@ -22,7 +22,8 @@ data class NetworkSareeItem(
     val unitPrice: Double,
     val pieceCount: Int,
     val imageUrl: String? = null,
-    val email: String? = null
+    val email: String? = null,
+    val lastModified: Long? = 0L
 )
 
 @JsonClass(generateAdapter = true)
@@ -36,7 +37,8 @@ data class NetworkProductionItem(
     val estimatedCompletionDate: String,
     val status: String,
     val imageUrl: String? = null,
-    val email: String? = null
+    val email: String? = null,
+    val lastModified: Long? = 0L
 )
 
 @JsonClass(generateAdapter = true)
@@ -55,7 +57,8 @@ data class NetworkTransactionLog(
     val timestamp: Long?,
     val dateString: String?,
     val timeString: String? = "",
-    val email: String? = null
+    val email: String? = null,
+    val lastModified: Long? = 0L
 )
 
 @JsonClass(generateAdapter = true)
